@@ -73,6 +73,8 @@ export default function MusicCarousel() {
   const handleNativeCenterTapRef = useRef(null);
   /** Touchstart/mousedown target .cf-item — touchend target is unreliable on iOS Safari. */
   const touchedCfItemRef = useRef(null);
+  /** Mounted for centered album w/ .mp4 so play() can run in the same touch gesture as audio. */
+  const activeAnimatedVideoRef = useRef(null);
   const touchGestureRef = useRef({ startX: 0, startY: 0, maxDist: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
@@ -80,7 +82,10 @@ export default function MusicCarousel() {
 
   useEffect(() => {
     const audio = audioRef.current;
-    const onEnded = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      activeAnimatedVideoRef.current?.pause?.();
+    };
     audio.addEventListener("ended", onEnded);
     return () => {
       audio.removeEventListener("ended", onEnded);
@@ -339,6 +344,7 @@ export default function MusicCarousel() {
     if (!audio.paused) {
       audio.pause();
       setIsPlaying(false);
+      activeAnimatedVideoRef.current?.pause?.();
       touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
       return;
     }
@@ -349,11 +355,21 @@ export default function MusicCarousel() {
       audio.src = src;
     }
     audio.volume = 1;
+    setIsPlaying(true);
     const p = audio.play();
     if (p !== undefined) {
-      void p.then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-    } else {
-      setIsPlaying(true);
+      void p.catch(() => {
+        setIsPlaying(false);
+        activeAnimatedVideoRef.current?.pause?.();
+      });
+    }
+    const v = activeAnimatedVideoRef.current;
+    if (v && albums[idx]?.animatedCover) {
+      v.muted = true;
+      v.setAttribute("playsinline", "");
+      v.setAttribute("webkit-playsinline", "");
+      const vp = v.play();
+      if (vp !== undefined) void vp.catch(() => {});
     }
     touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
   };
@@ -461,14 +477,15 @@ export default function MusicCarousel() {
                   draggable={false}
                 />
                 <div className="album-cover-fallback" style={{ backgroundColor: album.dominantColor }} />
-                {index === activeIdx && isPlaying && album.animatedCover ? (
+                {index === activeIdx && album.animatedCover ? (
                   <video
-                    className="animated-cover-video"
+                    ref={activeAnimatedVideoRef}
+                    className={`animated-cover-video${isPlaying ? " animated-cover-video--playing" : ""}`}
                     src={album.animatedCover}
                     poster={album.cover}
-                    autoPlay
                     muted
                     playsInline
+                    preload="metadata"
                     loop
                     disablePictureInPicture
                     controlsList="nodownload nofullscreen noremoteplayback"
