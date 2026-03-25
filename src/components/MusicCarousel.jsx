@@ -18,6 +18,8 @@ const SNAP_DURATION = 400;
 const SCROLL_RENDER_EPS = 1e-5;
 /** Movement below this (px) counts as a tap for sync mobile audio (fat-finger friendly). */
 const TAP_MAX_MOVE_PX = 15;
+/** Delay to distinguish single tap (play/pause) from double tap (skip track). */
+const TAP_DELAY_MS = 300;
 
 function parseAudioTracks(audioSrc) {
   if (audioSrc == null || audioSrc === "") return [];
@@ -72,6 +74,8 @@ export default function MusicCarousel() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
   const currentTrackIdxRef = useRef(0);
+  const isPlayingRef = useRef(false);
+  const clickTimeoutRef = useRef(null);
   const activeIdxRef = useRef(0);
   const lastRenderedScrollRef = useRef(0);
   const onPointerDownRef = useRef(null);
@@ -88,6 +92,7 @@ export default function MusicCarousel() {
   const wrap = count > 5;
 
   currentTrackIdxRef.current = currentTrackIdx;
+  isPlayingRef.current = isPlaying;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -99,11 +104,19 @@ export default function MusicCarousel() {
     return () => {
       audio.removeEventListener("ended", onEnded);
       audio.pause();
+      if (clickTimeoutRef.current != null) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
     };
   }, []);
 
   /** Swipe / scroll to another album: stop playback immediately. */
   useEffect(() => {
+    if (clickTimeoutRef.current != null) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
     MUSIC_CAROUSEL_AUDIO_ENGINE.pause();
     setIsPlaying(false);
   }, [activeIdx]);
@@ -359,7 +372,7 @@ export default function MusicCarousel() {
 
     const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
 
-    function assignSrcAndPlay(url) {
+    function assignSrcAndPlaySync(url) {
       try {
         const resolved = new URL(url, window.location.href).href;
         if (audio.src !== resolved) audio.src = url;
@@ -378,24 +391,43 @@ export default function MusicCarousel() {
       }
     }
 
-    if (audio.paused) {
-      const tIdx = Math.min(currentTrackIdxRef.current, tracks.length - 1);
-      assignSrcAndPlay(tracks[tIdx]);
-    } else {
+    function tryPlayAnimatedVideo() {
+      const v = activeAnimatedVideoRef.current;
+      if (v && albums[idx]?.animatedCover) {
+        v.muted = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        const vp = v.play();
+        if (vp !== undefined) void vp.catch(() => {});
+      }
+    }
+
+    if (clickTimeoutRef.current != null) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
       const next = (currentTrackIdxRef.current + 1) % tracks.length;
       currentTrackIdxRef.current = next;
       setCurrentTrackIdx(next);
-      assignSrcAndPlay(tracks[next]);
+      assignSrcAndPlaySync(tracks[next]);
+      tryPlayAnimatedVideo();
+      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+      return;
     }
 
-    const v = activeAnimatedVideoRef.current;
-    if (v && albums[idx]?.animatedCover) {
-      v.muted = true;
-      v.setAttribute("playsinline", "");
-      v.setAttribute("webkit-playsinline", "");
-      const vp = v.play();
-      if (vp !== undefined) void vp.catch(() => {});
-    }
+    clickTimeoutRef.current = window.setTimeout(() => {
+      clickTimeoutRef.current = null;
+      const tIdx = Math.min(currentTrackIdxRef.current, tracks.length - 1);
+      const url = tracks[tIdx];
+      if (isPlayingRef.current) {
+        audio.pause();
+        setIsPlaying(false);
+        activeAnimatedVideoRef.current?.pause?.();
+      } else {
+        assignSrcAndPlaySync(url);
+        tryPlayAnimatedVideo();
+      }
+    }, TAP_DELAY_MS);
+
     touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
   };
 
