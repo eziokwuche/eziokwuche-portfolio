@@ -15,6 +15,8 @@ const OFFSET_MULTIPLIER = 2.0;
 const AUTO_SCROLL = 0.00;
 const SNAP_DURATION = 400;
 const SCROLL_RENDER_EPS = 1e-5;
+/** Movement below this (px) counts as a tap for sync mobile audio (fat-finger friendly). */
+const TAP_MAX_MOVE_PX = 15;
 
 function easeInOut(t) {
   return t < 0.5
@@ -67,6 +69,9 @@ export default function MusicCarousel() {
   const onPointerDownRef = useRef(null);
   const onPointerMoveRef = useRef(null);
   const onPointerUpRef = useRef(null);
+  const handleNativeCenterTapRef = useRef(null);
+  const touchGestureRef = useRef({ startX: 0, startY: 0, maxDist: 0 });
+  const [isDragging, setIsDragging] = useState(false);
 
   const wrap = count > 5;
 
@@ -80,10 +85,14 @@ export default function MusicCarousel() {
     };
   }, []);
 
+  /** Swipe / scroll to another album: stop playback immediately. */
+  useEffect(() => {
+    MUSIC_CAROUSEL_AUDIO_ENGINE.pause();
+    setIsPlaying(false);
+  }, [activeIdx]);
+
   useEffect(() => {
     const audio = audioRef.current;
-    audio.pause();
-    setIsPlaying(false);
     const src = albums[activeIdx]?.audioSrc;
     if (src) {
       audio.src = src;
@@ -178,6 +187,9 @@ export default function MusicCarousel() {
   function onPointerDown(e) {
     e.preventDefault();
     const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    touchGestureRef.current = { startX: x, startY: y, maxDist: 0 };
+    setIsDragging(true);
     dragRef.current = { down: true, startX: x, prevX: x, prevTime: performance.now(), startOffset: scrollRef.current };
     velocityRef.current = 0;
     autoRef.current = false;
@@ -187,6 +199,10 @@ export default function MusicCarousel() {
   function onPointerMove(e) {
     if (!dragRef.current.down) return;
     const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    const g = touchGestureRef.current;
+    const d = Math.hypot(x - g.startX, y - g.startY);
+    g.maxDist = Math.max(g.maxDist, d);
     const dx = x - dragRef.current.prevX;
     const now = performance.now();
     const dtMs = now - dragRef.current.prevTime;
@@ -203,6 +219,7 @@ export default function MusicCarousel() {
   }
 
   function onPointerUp() {
+    setIsDragging(false);
     if (!dragRef.current.down) return;
     dragRef.current.down = false;
 
@@ -237,18 +254,7 @@ export default function MusicCarousel() {
   }
 
   function onItemClick(i) {
-    if (i === activeIdx) {
-      const src = albums[i]?.audioSrc;
-      if (src == null || src === "") return;
-      const audio = audioRef.current;
-      if (!audio.paused) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        void audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-      }
-      return;
-    }
+    if (i === activeIdx) return;
 
     autoRef.current = false;
     velocityRef.current = 0;
@@ -293,21 +299,64 @@ export default function MusicCarousel() {
   onPointerMoveRef.current = onPointerMove;
   onPointerUpRef.current = onPointerUp;
 
+  handleNativeCenterTapRef.current = (e) => {
+    if (touchGestureRef.current.maxDist >= TAP_MAX_MOVE_PX) return;
+    const root = wrapperRef.current;
+    const tappedItem = e.target?.closest?.(".cf-item");
+    if (!tappedItem || !root?.contains(tappedItem)) return;
+    const raw = tappedItem.dataset?.albumIndex;
+    if (raw === undefined) return;
+    const idx = Number(raw);
+    if (idx !== activeIdxRef.current) return;
+
+    const src = albums[idx]?.audioSrc;
+    if (src == null || src === "") {
+      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+      return;
+    }
+
+    const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
+    if (!audio.paused) {
+      audio.pause();
+      setIsPlaying(false);
+      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+      return;
+    }
+    try {
+      const resolved = new URL(src, window.location.href).href;
+      if (audio.src !== resolved) audio.src = src;
+    } catch {
+      audio.src = src;
+    }
+    void audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+  };
+
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    const onTouchStart = (e) => onPointerDownRef.current?.(e);
-    const onTouchMove = (e) => onPointerMoveRef.current?.(e);
-    const onTouchEnd = () => onPointerUpRef.current?.();
+    const onTouchStart = (e) => {
+      onPointerDownRef.current?.(e);
+    };
+    const onTouchMove = (e) => {
+      onPointerMoveRef.current?.(e);
+    };
+    const onTouchEnd = (e) => {
+      onPointerUpRef.current?.();
+      handleNativeCenterTapRef.current?.(e);
+    };
+    const onTouchCancel = () => {
+      onPointerUpRef.current?.();
+    };
     el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: true });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchCancel, { passive: true });
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchCancel);
     };
   }, []);
 
@@ -336,7 +385,6 @@ export default function MusicCarousel() {
         zIndex,
         opacity: Math.abs(off) > 4 ? 0 : 1 - absClamped * 0.3,
         pointerEvents: Math.abs(off) < 2 ? "auto" : "none",
-        cursor: Math.abs(off) < 0.1 ? "pointer" : "grab",
       },
     });
   }
@@ -350,9 +398,13 @@ export default function MusicCarousel() {
       <div
         className="coverflow-stage"
         ref={wrapperRef}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={onPointerDown}
         onMouseMove={onPointerMove}
-        onMouseUp={onPointerUp}
+        onMouseUp={(e) => {
+          onPointerUp();
+          handleNativeCenterTapRef.current?.(e.nativeEvent);
+        }}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -361,7 +413,15 @@ export default function MusicCarousel() {
             <div
               key={index}
               className={`cf-item${index === activeIdx ? " cf-item--active" : ""}`}
-              style={style}
+              style={{
+                ...style,
+                cursor: isDragging
+                  ? "grabbing"
+                  : index === activeIdx
+                    ? "pointer"
+                    : "grab",
+              }}
+              data-album-index={String(index)}
               onClick={() => onItemClick(index)}
             >
               <div className="album-cover">
