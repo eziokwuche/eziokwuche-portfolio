@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import albums from "@/data/albums";
 
+/** Single shared engine — avoids extra `Audio` instances (e.g. React Strict Mode remounts). */
+const MUSIC_CAROUSEL_AUDIO_ENGINE = new Audio();
+
 const TILT = 0.9;
 const SPACING = 0.25;
 const PERSPECTIVE = -1 / 500;
@@ -11,6 +14,7 @@ const SCROLL_SPEED = 1.0;
 const OFFSET_MULTIPLIER = 2.0;
 const AUTO_SCROLL = 0.00;
 const SNAP_DURATION = 400;
+const SCROLL_RENDER_EPS = 1e-5;
 
 function easeInOut(t) {
   return t < 0.5
@@ -56,8 +60,13 @@ export default function MusicCarousel() {
   const hoveredRef = useRef(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [, tick] = useState(0);
-  const audioRef = useRef(new Audio());
+  const audioRef = useRef(MUSIC_CAROUSEL_AUDIO_ENGINE);
   const [isPlaying, setIsPlaying] = useState(false);
+  const activeIdxRef = useRef(0);
+  const lastRenderedScrollRef = useRef(0);
+  const onPointerDownRef = useRef(null);
+  const onPointerMoveRef = useRef(null);
+  const onPointerUpRef = useRef(null);
 
   const wrap = count > 5;
 
@@ -148,9 +157,19 @@ export default function MusicCarousel() {
         const dist = Math.abs(off);
         if (dist < minDist) { minDist = dist; closest = i; }
       }
-      setActiveIdx((prev) => prev !== closest ? closest : prev);
 
-      tick((n) => n + 1);
+      let needsTick = false;
+      if (closest !== activeIdxRef.current) {
+        activeIdxRef.current = closest;
+        setActiveIdx(closest);
+        needsTick = true;
+      }
+      const s = scrollRef.current;
+      if (Math.abs(s - lastRenderedScrollRef.current) > SCROLL_RENDER_EPS) {
+        lastRenderedScrollRef.current = s;
+        needsTick = true;
+      }
+      if (needsTick) tick((n) => n + 1);
     }
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
@@ -270,6 +289,28 @@ export default function MusicCarousel() {
     onPointerUp();
   }
 
+  onPointerDownRef.current = onPointerDown;
+  onPointerMoveRef.current = onPointerMove;
+  onPointerUpRef.current = onPointerUp;
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onTouchStart = (e) => onPointerDownRef.current?.(e);
+    const onTouchMove = (e) => onPointerMoveRef.current?.(e);
+    const onTouchEnd = () => onPointerUpRef.current?.();
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
   const bgColor = albums[activeIdx]?.dominantColor || "#000";
 
   const visible = [];
@@ -314,9 +355,6 @@ export default function MusicCarousel() {
         onMouseUp={onPointerUp}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
-        onTouchStart={onPointerDown}
-        onTouchMove={onPointerMove}
-        onTouchEnd={onPointerUp}
       >
         <div className="coverflow-perspective">
           {visible.map(({ album, index, style }) => (
@@ -330,6 +368,8 @@ export default function MusicCarousel() {
                 <img
                   src={album.cover}
                   alt={`${album.title} by ${album.artist}`}
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => { e.target.style.display = "none"; }}
                   draggable={false}
                 />
@@ -338,6 +378,7 @@ export default function MusicCarousel() {
                   <video
                     className="animated-cover-video"
                     src={album.animatedCover}
+                    poster={album.cover}
                     autoPlay
                     muted
                     playsInline

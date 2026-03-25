@@ -175,6 +175,9 @@ body::-webkit-scrollbar {
   object-fit: cover;
   display: block;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .album-cover-fallback {
