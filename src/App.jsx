@@ -50,13 +50,27 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    window.location.hash = "home";
-    function onHashChange() {
-      const hash = window.location.hash.slice(1);
-      if (VIEWS[hash]) setView(hash);
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
     }
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+
+    function syncFromHash() {
+      const raw = window.location.hash.slice(1);
+      if (VIEWS[raw]) setView(raw);
+    }
+
+    // Full reload / refresh: always land on home (do not restore #about etc.)
+    const { pathname, search } = window.location;
+    window.history.replaceState(null, "", `${pathname}${search}#home`);
+    setView("home");
+
+    // Beat browser scroll restoration + ensure Smoother is at top after reload
+    requestAnimationFrame(() => {
+      window.__scrollSmoother?.scrollTo(0, false);
+    });
+
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
   }, []);
 
   function navigate(target) {

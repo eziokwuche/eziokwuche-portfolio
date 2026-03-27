@@ -6,11 +6,16 @@ for (let i = 0; i < SIN_SIZE; i++) {
   SIN_TABLE[i] = Math.sin((i / SIN_SIZE) * Math.PI * 2);
 }
 
-const MAX_PARTICLES = 10000;
+const MAX_PARTICLES = 8500;
+/** Only run proximity sparkles inside this radius² (avoids ~7k×Math.random per frame). */
+const PROX_RAD_SQ = 180 * 180;
 const ALPHA_LEVELS = 16;
 
 const HERO_DESKTOP = "/Portfolio Hero-Desktop.png";
 const HERO_MOBILE = "/Portfolio Hero-Mobile.png";
+
+/** Nudge the hero down from vertical center so bottom dots sit on the viewport edge. */
+const HERO_VERTICAL_NUDGE_PX = 6;
 
 function getBreakpoint() {
   const w = window.innerWidth;
@@ -150,8 +155,7 @@ export default function InteractiveHero() {
       const tw = img.naturalWidth * scale;
       const th = img.naturalHeight * scale;
       const ox = (cw - tw) / 2;
-      const lift = Math.round(ch * 0.03);
-      offY = (ch - th) / 2 - lift;
+      offY = (ch - th) / 2 + HERO_VERTICAL_NUDGE_PX;
       targetH = th;
 
       let step = vMin < 500 ? 7 : vMin < 800 ? 8 : vMin < 1200 ? 9 : 10;
@@ -206,7 +210,13 @@ export default function InteractiveHero() {
             const dotY = offY + (row + 0.5) * stepY;
             const pxVal = (dotX - halfDot) | 0;
             const pyVal = (dotY - halfDot) | 0;
-            if (pxVal + dotSize < 0 || pxVal > cw || pyVal + dotSize < 0 || pyVal > ch) continue;
+            if (
+              pxVal + dotSize <= 0 ||
+              pxVal >= cw ||
+              pyVal + dotSize <= 0 ||
+              pyVal >= ch
+            )
+              continue;
             particles.push({
               px: pxVal,
               py: pyVal,
@@ -271,15 +281,15 @@ export default function InteractiveHero() {
           if (!revealDone && p.y <= revealY) {
             p.active = true;
             p.t = now;
-          } else if (dSq < 10000 && Math.random() < 0.5) {
-            p.active = true;
-            p.t = now;
-          } else if (dSq < 40000 && Math.random() < 0.15) {
-            p.active = true;
-            p.t = now;
-          } else if (dSq < 90000 && Math.random() < 0.05) {
-            p.active = true;
-            p.t = now;
+          } else if (dSq < PROX_RAD_SQ) {
+            const r = Math.random();
+            if (
+              (dSq < 10000 && r < 0.45) ||
+              (dSq < 40000 && r < 0.12)
+            ) {
+              p.active = true;
+              p.t = now;
+            }
           }
         }
 
@@ -373,7 +383,7 @@ export default function InteractiveHero() {
     heroImg.onerror = () => {
       if (destroyed) return;
       sizeCanvas();
-      ctx.font = "24px sans-serif";
+      ctx.font = '24px "Inter", system-ui, sans-serif';
       ctx.fillStyle = "#fff";
       ctx.fillText("Could not load hero image", 20, 40);
     };

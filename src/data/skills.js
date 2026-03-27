@@ -1,26 +1,50 @@
-const skills = [
-  { name: "Python", icon: "devicon-python-plain" },
-  { name: "Jupyter", icon: "devicon-jupyter-plain" },
-  { name: "NumPy", icon: "devicon-numpy-original" },
-  { name: "pandas", icon: "devicon-pandas-original" },
-  { name: "Matplotlib", icon: "devicon-matplotlib-plain" },
-  { name: "Plotly", icon: "devicon-plotly-plain" },
-  { name: "SciPy", icon: "devicon-scipy-plain" },
-  { name: "PyTorch", icon: "devicon-pytorch-original" },
-  { name: "R", icon: "devicon-r-original" },
-  { name: "SQL", icon: "devicon-postgresql-plain" },
-  { name: "HTML", icon: "devicon-html5-plain" },
-  { name: "CSS", icon: "devicon-css3-plain" },
-  { name: "JavaScript", icon: "devicon-javascript-plain" },
-  { name: "React", icon: "devicon-react-original" },
-  { name: "Node.js", icon: "devicon-nodejs-plain" },
-  { name: "Docker", icon: "devicon-docker-plain" },
-  { name: "Azure", icon: "devicon-azure-plain" },
-  { name: "Git", icon: "devicon-git-plain" },
-  { name: "GitHub", icon: "devicon-github-original" },
-  { name: "VS Code", icon: "devicon-vscode-plain" },
-  { name: "Figma", icon: "devicon-figma-plain" },
-  { name: "Scrapy", icon: "devicon-python-plain" },
+/**
+ * Skills marquees: two disjoint rows.
+ * `logo` — SVG (or raster) in /public/skills-logos (full color on pill hover).
+ */
+export const skillsMarqueeRow1 = [
+  { name: "Python", logo: "/skills-logos/python.svg" },
+  {
+    name: "JS",
+    logo: "/skills-logos/javascript.svg",
+    ariaLabel: "JavaScript",
+  },
+  {
+    name: "TS",
+    logo: "/skills-logos/typescript.svg",
+    ariaLabel: "TypeScript",
+  },
+  { name: "Tailwind CSS", logo: "/skills-logos/tailwind.svg" },
+  { name: "Java", logo: "/skills-logos/java.svg" },
+  { name: "Node.js", logo: "/skills-logos/nodejs.svg" },
+  { name: "Git", logo: "/skills-logos/git.svg" },
+  { name: "GitHub", logo: "/skills-logos/github.svg" },
+  { name: "Visual Studio Code", logo: "/skills-logos/vscode.svg" },
+  { name: "AWS", logo: "/skills-logos/aws.svg" },
+  { name: "Azure", logo: "/skills-logos/azure.svg" },
+  { name: "React", logo: "/skills-logos/react.svg" },
+  { name: "Next.js", logo: "/skills-logos/nextjs.svg" },
+  { name: "Vue", logo: "/skills-logos/vue.svg" },
 ];
+
+export const skillsMarqueeRow2 = [
+  { name: "PostgreSQL", logo: "/skills-logos/postgresql.svg" },
+  { name: "Google Cloud", logo: "/skills-logos/google-cloud.svg" },
+  { name: "Jupyter", logo: "/skills-logos/jupyter.svg" },
+  { name: "Photoshop", logo: "/skills-logos/photoshop.svg" },
+  { name: "Illustrator", logo: "/skills-logos/illustrator.svg" },
+  { name: "After Effects", logo: "/skills-logos/after-effects.svg" },
+  { name: "Figma", logo: "/skills-logos/figma.svg" },
+  {
+    name: "R",
+    logo: "/skills-logos/r.svg",
+    ariaLabel: "R",
+  },
+  { name: "Docker", logo: "/skills-logos/docker.svg" },
+  { name: "Twine", logo: "/skills-logos/twine.svg" },
+  { name: "Excel", logo: "/skills-logos/excel.svg" },
+];
+
+const skills = [...skillsMarqueeRow1, ...skillsMarqueeRow2];
 
 export default skills;

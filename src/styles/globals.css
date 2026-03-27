@@ -27,6 +27,13 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
 /* ── Hero ─────────────────────────────────────── */
 
 .hero {
@@ -106,6 +113,69 @@ body::-webkit-scrollbar {
   line-height: 1.8;
 }
 
+/* ── About: home-intro — fluid brutalist editorial poster ─ */
+
+.home-intro {
+  position: relative;
+  width: 100%;
+  background: #000;
+  color: #fff;
+}
+
+/* Tall editorial frame; paragraph reads wide (measure >> line height). */
+.home-intro__editorial {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: 100svh;
+  padding-top: clamp(3rem, 8vh, 6rem);
+  padding-bottom: clamp(3rem, 8vh, 6rem);
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .home-intro__editorial {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-intro__editorial {
+    padding-left: 6rem;
+    padding-right: 6rem;
+  }
+}
+
+.home-intro__copy.p1,
+.p1,
+.p2,
+.p3 {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.home-intro__copy.p1 {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Fluid paragraph: smaller type, wide measure, comfortable leading. */
+.home-intro__copy.p1 p {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: clamp(1.0625rem, 2.15vw, 1.3125rem);
+  letter-spacing: -0.02em;
+  line-height: 1.6;
+  color: #fff;
+  max-width: min(58rem, 100%);
+  width: 100%;
+}
+
 /* ── Music Cover Flow ─────────────────────────── */
 
 .music-section {
@@ -153,12 +223,19 @@ body::-webkit-scrollbar {
 
 .cf-label {
   margin-top: 12px;
+  width: 100%;
+  max-width: 200px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 
 .album-cover {
   position: relative;
   width: 200px;
   height: 200px;
+  margin-left: auto;
+  margin-right: auto;
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
@@ -213,14 +290,35 @@ body::-webkit-scrollbar {
 }
 
 .album-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  margin: 0 0 2px;
-  white-space: nowrap;
+  margin: 0 auto 2px;
+  max-width: 200px;
+  min-width: 0;
+}
+
+.album-title__text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  white-space: nowrap;
+}
+
+.music-explicit-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.music-explicit-icon {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .album-artist {
@@ -231,6 +329,7 @@ body::-webkit-scrollbar {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+  text-align: center;
 }
 
 .audio-placeholder {
@@ -326,49 +425,191 @@ body::-webkit-scrollbar {
   max-width: 560px;
 }
 
-/* ── Skills Carousel ──────────────────────────── */
+/* ── Skills marquee (pill row + edge fades, Tailwind-style) ─ */
 
 .skills-section {
   min-height: auto;
   padding-bottom: 80px;
 }
 
-.skills-ribbon-wrapper {
+.skills-marquee-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: min(960px, 94vw);
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+.skills-marquee-stack__title {
+  opacity: 1;
+  transform: translateY(-6px);
+}
+
+.skills-marquee-stack__heading {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.skill-marquee-group {
+  --skill-marquee-gap: 1rem;
+  --skill-marquee-duration: 25s;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  gap: var(--skill-marquee-gap);
   width: 100%;
   overflow: hidden;
-  margin-top: 24px;
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
-.skills-ribbon {
+.skill-marquee-group:hover .skill-marquee-track,
+.skill-marquee-group:hover .skill-marquee-track--reverse {
+  animation-play-state: paused;
+}
+
+.skill-marquee-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16.666%;
+  max-width: 120px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.skill-marquee-fade--left {
+  left: 0;
+  background: linear-gradient(to right, #000 0%, transparent 100%);
+}
+
+.skill-marquee-fade--right {
+  right: 0;
+  background: linear-gradient(to left, #000 0%, transparent 100%);
+}
+
+.skill-marquee-clip {
+  overflow: hidden;
+  width: 100%;
+  contain: content;
+}
+
+.skill-marquee-track {
   display: flex;
-  gap: 48px;
+  flex-direction: row;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--skill-marquee-gap);
   width: max-content;
-  animation: skillsScroll 30s linear infinite;
+  animation: skillMarquee var(--skill-marquee-duration) linear infinite;
+  will-change: transform;
 }
 
-@keyframes skillsScroll {
+.skill-marquee-track--reverse {
+  animation: skillMarqueeReverse var(--skill-marquee-duration) linear infinite;
+  will-change: transform;
+}
+
+@keyframes skillMarquee {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
-.skill-item {
-  display: flex;
-  flex-direction: column;
+@keyframes skillMarqueeReverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.skill-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  outline: none;
   flex-shrink: 0;
 }
 
-.skill-item i {
-  font-size: 36px;
-  color: rgba(255, 255, 255, 0.7);
+.skill-pill:hover,
+.skill-pill:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-.skill-name {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.03em;
-  white-space: nowrap;
+.skill-pill:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Skill font icons (if any): mute with filter only; restore hue on hover. */
+.skill-pill__icon {
+  font-size: 1.375rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: grayscale(1) brightness(0.92) contrast(1.05) opacity(0.72);
+  transition: filter 0.22s ease;
+}
+
+.skill-pill:hover .skill-pill__icon,
+.skill-pill:focus-visible .skill-pill__icon {
+  filter: none;
+}
+
+.skill-pill__img {
+  width: 1.375rem;
+  height: 1.375rem;
+  object-fit: contain;
+  object-position: center;
+  flex-shrink: 0;
+  display: block;
+  background: none;
+  filter: grayscale(1) brightness(0.95) contrast(1.05) opacity(0.75);
+  transition: filter 0.22s ease, opacity 0.22s ease;
+}
+
+.skill-pill:hover .skill-pill__img,
+.skill-pill:focus-visible .skill-pill__img {
+  filter: none;
+  opacity: 1;
+}
+
+.skill-pill__name {
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* No hover: show full color (touch / reduced fine pointer) */
+@media (hover: none), (pointer: coarse) {
+  .skill-pill__icon {
+    filter: none;
+    opacity: 1;
+  }
+
+  .skill-pill__img {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-marquee-track,
+  .skill-marquee-track--reverse {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    transform: none;
+  }
 }
 
 /* ── Project Grid ─────────────────────────────── */
@@ -568,10 +809,13 @@ body::-webkit-scrollbar {
 }
 
 .ft-mails {
+  --ft-mail-gap: 1rem;
+  /* Taller stack between Get In Touch + Location so Location lines up with ~Projects / Instagram row */
+  --ft-mails-between: clamp(2.25rem, 4.5vw, 3.35rem);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2.5rem;
+  gap: var(--ft-mails-between);
   text-align: right;
 }
 
@@ -579,15 +823,17 @@ body::-webkit-scrollbar {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: var(--ft-mail-gap);
 }
 
 .ft-mail .ft-label {
-  margin-bottom: 1rem;
+  margin: 0;
   text-align: right;
   padding-top: 0;
 }
 
 .ft-mail .ft-link {
+  margin: 0;
   text-align: right;
 }
 
@@ -599,20 +845,63 @@ body::-webkit-scrollbar {
   justify-content: flex-end;
 }
 
-.ft-end-logo {
+@keyframes ft-end-logo-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.ft-end-logo-marquee {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15em;
+  overflow: hidden;
+  padding-bottom: 1.25rem;
   font-size: clamp(2rem, 11.5vw, 12rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 0.9;
   text-transform: uppercase;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+
+.ft-end-logo-track {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: max-content;
+  animation: ft-end-logo-marquee 55s linear infinite;
+  will-change: transform;
+}
+
+/* One repeat unit: logo — ANDREW — UCHECHUKWU — NNANI; same gap + pad before next copy loops */
+.ft-end-logo-segment {
+  --ft-marquee-gap: clamp(0.45em, 2.2vw, 1.1em);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ft-marquee-gap);
+  flex-shrink: 0;
   white-space: nowrap;
-  text-align: center;
-  padding-bottom: 1.25rem;
+  width: max-content;
+  box-sizing: border-box;
+  padding-right: var(--ft-marquee-gap);
 }
 
 .ft-end-icon {
@@ -623,20 +912,31 @@ body::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
-.ft-end-texts {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
-}
+@media (prefers-reduced-motion: reduce) {
+  .ft-end-logo-track {
+    animation: none;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: wrap;
+  }
 
-.ft-end-sign,
-.ft-end-location {
-  margin: 0;
+  .ft-end-logo-marquee {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .ft-end-logo-segment {
+    width: 100%;
+    max-width: 36rem;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-right: 0;
+  }
+
+  .ft-end-logo-segment[aria-hidden="true"] {
+    display: none;
+  }
 }
 
 /* ── Mobile ───────────────────────────────────── */
@@ -654,12 +954,34 @@ body::-webkit-scrollbar {
     padding: 60px 0;
   }
 
-  .skills-ribbon {
-    gap: 32px;
+  .skills-marquee-stack {
+    max-width: min(720px, 93vw);
+    padding: 1rem 0;
+    gap: 0.75rem;
   }
 
-  .skill-item i {
-    font-size: 28px;
+  .skill-marquee-group {
+    --skill-marquee-gap: 0.75rem;
+    padding: 0.375rem;
+  }
+
+  .skill-marquee-fade {
+    max-width: 72px;
+  }
+
+  .skill-pill {
+    font-size: 0.6875rem;
+    padding: 0.3rem 0.55rem;
+    gap: 0.35rem;
+  }
+
+  .skill-pill__icon {
+    font-size: 1.1875rem;
+  }
+
+  .skill-pill__img {
+    width: 1.1875rem;
+    height: 1.1875rem;
   }
 }
 
@@ -699,14 +1021,8 @@ body::-webkit-scrollbar {
     font-size: 22px;
   }
 
-  .ft-end-logo {
+  .ft-end-logo-marquee {
     font-size: clamp(2rem, 11.5vw, 5rem);
-  }
-
-  .ft-end-texts {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
   }
 
   .page-section {

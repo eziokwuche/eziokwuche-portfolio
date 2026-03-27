@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import albums from "@/data/albums";
+import { ExplicitIcon } from "@/components/icons/ExplicitIcon";
 
 /** Single shared engine — avoids extra `Audio` instances (e.g. React Strict Mode remounts). */
 const MUSIC_CAROUSEL_AUDIO_ENGINE = new Audio();
@@ -18,12 +19,20 @@ const SNAP_DURATION = 400;
 const SCROLL_RENDER_EPS = 1e-5;
 /** Movement below this (px) counts as a tap for sync mobile audio (fat-finger friendly). */
 const TAP_MAX_MOVE_PX = 15;
-/** Delay to distinguish single tap (play/pause) from double tap (skip track). */
-const TAP_DELAY_MS = 300;
 
 function parseAudioTracks(audioSrc) {
   if (audioSrc == null || audioSrc === "") return [];
   return audioSrc.split(";").map((s) => s.trim()).filter(Boolean);
+}
+
+/** Fisher–Yates shuffle of indices 0..n-1 */
+function shuffleIndices(n) {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function easeInOut(t) {
@@ -74,9 +83,11 @@ export default function MusicCarousel() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
   const currentTrackIdxRef = useRef(0);
-  /** Previous track index before last double-tap shuffle (avoids A→B→A repeats). */
-  const lastTrackIdxRef = useRef(null);
-  const clickTimeoutRef = useRef(null);
+  /** Permutation of track indices for the current “round”; each index appears once per round. */
+  const shuffleOrderRef = useRef([]);
+  /** Index into shuffleOrderRef (which track in the shuffled order is current). */
+  const shufflePosRef = useRef(0);
+  const handleTrackEndedRef = useRef(() => {});
   const activeIdxRef = useRef(0);
   const lastRenderedScrollRef = useRef(0);
   const onPointerDownRef = useRef(null);
@@ -89,6 +100,7 @@ export default function MusicCarousel() {
   const activeAnimatedVideoRef = useRef(null);
   const touchGestureRef = useRef({ startX: 0, startY: 0, maxDist: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const sectionInViewRef = useRef(true);
 
   const wrap = count > 5;
 
@@ -97,44 +109,105 @@ export default function MusicCarousel() {
   useEffect(() => {
     const audio = audioRef.current;
     const onEnded = () => {
-      setIsPlaying(false);
-      activeAnimatedVideoRef.current?.pause?.();
+      handleTrackEndedRef.current();
     };
     audio.addEventListener("ended", onEnded);
     return () => {
       audio.removeEventListener("ended", onEnded);
       audio.pause();
-      if (clickTimeoutRef.current != null) {
-        clearTimeout(clickTimeoutRef.current);
-        clickTimeoutRef.current = null;
-      }
     };
   }, []);
 
   /** Swipe / scroll to another album: stop playback immediately. */
   useEffect(() => {
-    if (clickTimeoutRef.current != null) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-    }
     MUSIC_CAROUSEL_AUDIO_ENGINE.pause();
     setIsPlaying(false);
   }, [activeIdx]);
 
   useEffect(() => {
-    currentTrackIdxRef.current = 0;
-    setCurrentTrackIdx(0);
-    lastTrackIdxRef.current = null;
     const audio = audioRef.current;
     const tracks = parseAudioTracks(albums[activeIdx]?.audioSrc);
-    const first = tracks[0];
-    if (first) {
-      audio.src = first;
-    } else {
+    if (tracks.length === 0) {
+      shuffleOrderRef.current = [];
+      shufflePosRef.current = 0;
+      currentTrackIdxRef.current = 0;
+      setCurrentTrackIdx(0);
       audio.removeAttribute("src");
+      audio.load();
+      return;
     }
+    shuffleOrderRef.current = shuffleIndices(tracks.length);
+    shufflePosRef.current = 0;
+    const firstIdx = shuffleOrderRef.current[0];
+    currentTrackIdxRef.current = firstIdx;
+    setCurrentTrackIdx(firstIdx);
+    audio.src = tracks[firstIdx];
     audio.load();
   }, [activeIdx]);
+
+  /**
+   * Advance to the next track in the shuffled order (skip or natural end).
+   * Returns null once every track has played — playlist stops until the user starts again (new shuffle on album change).
+   */
+  function advanceToNextInShuffleOrder(tracks) {
+    const n = tracks.length;
+    if (n === 0) return null;
+    const order = shuffleOrderRef.current;
+    if (order.length !== n) {
+      shuffleOrderRef.current = shuffleIndices(n);
+      shufflePosRef.current = -1;
+    }
+    const len = shuffleOrderRef.current.length;
+    let pos = shufflePosRef.current + 1;
+    if (pos >= len) {
+      return null;
+    }
+    shufflePosRef.current = pos;
+    return shuffleOrderRef.current[pos];
+  }
+
+  handleTrackEndedRef.current = () => {
+    const audio = audioRef.current;
+    const idx = activeIdxRef.current;
+    const tracks = parseAudioTracks(albums[idx]?.audioSrc);
+    if (tracks.length === 0) {
+      setIsPlaying(false);
+      activeAnimatedVideoRef.current?.pause?.();
+      return;
+    }
+    const nextIdx = advanceToNextInShuffleOrder(tracks);
+    if (nextIdx == null) {
+      setIsPlaying(false);
+      activeAnimatedVideoRef.current?.pause?.();
+      return;
+    }
+    currentTrackIdxRef.current = nextIdx;
+    setCurrentTrackIdx(nextIdx);
+    try {
+      const resolved = new URL(tracks[nextIdx], window.location.href).href;
+      if (audio.src !== resolved) audio.src = tracks[nextIdx];
+    } catch {
+      audio.src = tracks[nextIdx];
+    }
+    audio.load();
+    audio.volume = 1;
+    setIsPlaying(true);
+    const p = audio.play();
+    if (p !== undefined) {
+      void p.catch(() => {
+        setIsPlaying(false);
+        activeAnimatedVideoRef.current?.pause?.();
+      });
+    }
+    const v = activeAnimatedVideoRef.current;
+    if (v && albums[idx]?.animatedCover) {
+      v.muted = true;
+      v.setAttribute("playsinline", "");
+      v.setAttribute("webkit-playsinline", "");
+      const vp = v.play();
+      if (vp !== undefined) void vp.catch(() => {});
+    }
+  };
 
   const decelDistance = useCallback((v0) => {
     const a = -v0 * DECEL_MULTIPLIER * (1 - DECEL_RATE);
@@ -169,9 +242,40 @@ export default function MusicCarousel() {
   }, [count, wrap]);
 
   useEffect(() => {
+    const sectionEl = sectionRef.current;
+    const inViewRef = sectionInViewRef;
+    inViewRef.current = true;
+
+    const io =
+      sectionEl &&
+      new IntersectionObserver(
+        ([e]) => {
+          inViewRef.current = e.isIntersecting;
+          if (e.isIntersecting && rafRef.current == null) {
+            lastTimeRef.current = 0;
+            rafRef.current = requestAnimationFrame(loop);
+          }
+        },
+        { rootMargin: "100px", threshold: 0 }
+      );
+    if (sectionEl) io.observe(sectionEl);
+
     function loop(now) {
+      const busy =
+        dragRef.current.down ||
+        snapRef.current != null ||
+        Math.abs(velocityRef.current) > 0.01;
+      if (!inViewRef.current && !busy) {
+        rafRef.current = null;
+        lastTimeRef.current = 0;
+        return;
+      }
+
       rafRef.current = requestAnimationFrame(loop);
-      if (!lastTimeRef.current) { lastTimeRef.current = now; return; }
+      if (!lastTimeRef.current) {
+        lastTimeRef.current = now;
+        return;
+      }
       const dt = Math.min(now - lastTimeRef.current, 50) / 1000;
       lastTimeRef.current = now;
 
@@ -198,7 +302,10 @@ export default function MusicCarousel() {
       for (let i = 0; i < count; i++) {
         const off = itemOffset(i, scrollRef.current, count, wrap);
         const dist = Math.abs(off);
-        if (dist < minDist) { minDist = dist; closest = i; }
+        if (dist < minDist) {
+          minDist = dist;
+          closest = i;
+        }
       }
 
       let needsTick = false;
@@ -214,9 +321,14 @@ export default function MusicCarousel() {
       }
       if (needsTick) tick((n) => n + 1);
     }
+
     rafRef.current = requestAnimationFrame(loop);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [count, wrap, snapToNearest, decelDistance]);
+    return () => {
+      io?.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [count, wrap, snapToNearest]);
 
   function onPointerDown(e) {
     e.preventDefault();
@@ -373,27 +485,7 @@ export default function MusicCarousel() {
 
     const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
 
-    /** Double-tap smart shuffle only: new src resets playhead to 0:00. */
-    function loadTrackAndPlaySync(url) {
-      try {
-        const resolved = new URL(url, window.location.href).href;
-        if (audio.src !== resolved) audio.src = url;
-      } catch {
-        audio.src = url;
-      }
-      audio.load();
-      audio.volume = 1;
-      setIsPlaying(true);
-      const p = audio.play();
-      if (p !== undefined) {
-        void p.catch(() => {
-          setIsPlaying(false);
-          activeAnimatedVideoRef.current?.pause?.();
-        });
-      }
-    }
-
-    /** Single-tap resume: do not touch .src (preserves playhead). */
+    /** Resume: do not touch .src (preserves playhead). */
     function resumeWithoutChangingSrc() {
       audio.volume = 1;
       setIsPlaying(true);
@@ -417,49 +509,14 @@ export default function MusicCarousel() {
       }
     }
 
-    if (clickTimeoutRef.current != null) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-      const cur = currentTrackIdxRef.current;
-      let nextIdx;
-      if (tracks.length > 2) {
-        const candidates = [];
-        for (let i = 0; i < tracks.length; i++) {
-          if (i === cur) continue;
-          if (lastTrackIdxRef.current != null && i === lastTrackIdxRef.current) continue;
-          candidates.push(i);
-        }
-        if (candidates.length === 0) {
-          for (let i = 0; i < tracks.length; i++) {
-            if (i !== cur) candidates.push(i);
-          }
-        }
-        nextIdx = candidates[Math.floor(Math.random() * candidates.length)];
-      } else if (tracks.length === 2) {
-        nextIdx = cur === 0 ? 1 : 0;
-      } else {
-        nextIdx = 0;
-      }
-      lastTrackIdxRef.current = cur;
-      currentTrackIdxRef.current = nextIdx;
-      setCurrentTrackIdx(nextIdx);
-      loadTrackAndPlaySync(tracks[nextIdx]);
+    if (audio.paused) {
+      resumeWithoutChangingSrc();
       tryPlayAnimatedVideo();
-      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
-      return;
+    } else {
+      audio.pause();
+      setIsPlaying(false);
+      activeAnimatedVideoRef.current?.pause?.();
     }
-
-    clickTimeoutRef.current = window.setTimeout(() => {
-      clickTimeoutRef.current = null;
-      if (audio.paused) {
-        resumeWithoutChangingSrc();
-        tryPlayAnimatedVideo();
-      } else {
-        audio.pause();
-        setIsPlaying(false);
-        activeAnimatedVideoRef.current?.pause?.();
-      }
-    }, TAP_DELAY_MS);
 
     touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
   };
@@ -584,7 +641,18 @@ export default function MusicCarousel() {
                 ) : null}
               </div>
               <div className="cf-label">
-                <p className="album-title">{album.title}</p>
+                <p className="album-title">
+                  <span className="album-title__text">{album.title}</span>
+                  {album.isExplicit ? (
+                    <span
+                      className="music-explicit-badge"
+                      aria-label="Explicit"
+                      title="Explicit"
+                    >
+                      <ExplicitIcon className="music-explicit-icon" />
+                    </span>
+                  ) : null}
+                </p>
                 <p className="album-artist">{album.artist}</p>
               </div>
             </div>

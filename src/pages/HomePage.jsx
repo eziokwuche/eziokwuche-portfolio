@@ -90,20 +90,29 @@ export default function HomePage({ navigate }) {
       </section>
 
       <section className="ft-end">
-        <div className="ft-end-logo">
-          <span>ANDREW</span>
-          <img
-            src="/Portfolio Favicon.png"
-            alt=""
-            className="ft-end-icon"
-            draggable={false}
-          />
-          <span>NNANI</span>
-        </div>
+        <div
+          className="ft-end-logo-marquee"
+          aria-label="Uchechukwu Nnani"
+        >
+          <div className="ft-end-logo-track">
+            {[0, 1].map((dup) => (
+              <div
+                key={dup}
+                className="ft-end-logo-segment"
+                aria-hidden={dup === 1}
+              >
+                <img
+                  src="/Portfolio Favicon.png"
+                  alt=""
+                  className="ft-end-icon"
+                  draggable={false}
+                />
 
-        <div className="ft-end-texts">
-          <p className="ft-end-sign">Information Science &amp; Creative Developer</p>
-          <p className="ft-end-location">Raleigh, North Carolina</p>
+                <span>UCHECHUKWU</span>
+                <span>NNANI</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </section>
