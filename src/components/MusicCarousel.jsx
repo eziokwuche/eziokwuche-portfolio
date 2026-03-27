@@ -25,6 +25,18 @@ function parseAudioTracks(audioSrc) {
   return audioSrc.split(";").map((s) => s.trim()).filter(Boolean);
 }
 
+/** Encode spaces/special chars in public paths (e.g. `/album covers/…`) for reliable fetch on all browsers. */
+function resolvedMediaUrl(path) {
+  if (path == null || path === "") return "";
+  const trimmed = String(path).trim();
+  if (typeof window === "undefined") return trimmed;
+  try {
+    return new URL(trimmed, window.location.href).href;
+  } catch {
+    return trimmed;
+  }
+}
+
 /** Fisher–Yates shuffle of indices 0..n-1 */
 function shuffleIndices(n) {
   const arr = Array.from({ length: n }, (_, i) => i);
@@ -101,8 +113,31 @@ export default function MusicCarousel() {
   const touchGestureRef = useRef({ startX: 0, startY: 0, maxDist: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const sectionInViewRef = useRef(true);
+  /** When false (user prefers reduced motion), animated .mp4 covers are not mounted or played. */
+  const [allowAnimatedAlbumCovers, setAllowAnimatedAlbumCovers] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return true;
+    }
+  });
 
   const wrap = count > 5;
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setAllowAnimatedAlbumCovers(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!allowAnimatedAlbumCovers) {
+      activeAnimatedVideoRef.current?.pause?.();
+    }
+  }, [allowAnimatedAlbumCovers]);
 
   currentTrackIdxRef.current = currentTrackIdx;
 
@@ -192,13 +227,6 @@ export default function MusicCarousel() {
     audio.load();
     audio.volume = 1;
     setIsPlaying(true);
-    const p = audio.play();
-    if (p !== undefined) {
-      void p.catch(() => {
-        setIsPlaying(false);
-        activeAnimatedVideoRef.current?.pause?.();
-      });
-    }
     const v = activeAnimatedVideoRef.current;
     if (v && albums[idx]?.animatedCover) {
       v.muted = true;
@@ -206,6 +234,13 @@ export default function MusicCarousel() {
       v.setAttribute("webkit-playsinline", "");
       const vp = v.play();
       if (vp !== undefined) void vp.catch(() => {});
+    }
+    const p = audio.play();
+    if (p !== undefined) {
+      void p.catch(() => {
+        setIsPlaying(false);
+        activeAnimatedVideoRef.current?.pause?.();
+      });
     }
   };
 
@@ -510,8 +545,9 @@ export default function MusicCarousel() {
     }
 
     if (audio.paused) {
-      resumeWithoutChangingSrc();
+      /* Video first: iOS/WebKit often only allows one in-band media play() per tap; muted inline video + audio right after works more reliably. */
       tryPlayAnimatedVideo();
+      resumeWithoutChangingSrc();
     } else {
       audio.pause();
       setIsPlaying(false);
@@ -599,7 +635,7 @@ export default function MusicCarousel() {
         onMouseLeave={onMouseLeave}
       >
         <div className="coverflow-perspective">
-          {visible.map(({ album, index, style }) => (
+          {visible.map(({ album, index, off, style }) => (
             <div
               key={index}
               className={`cf-item${index === activeIdx ? " cf-item--active" : ""}`}
@@ -616,20 +652,28 @@ export default function MusicCarousel() {
             >
               <div className="album-cover">
                 <img
-                  src={album.cover}
+                  src={resolvedMediaUrl(album.cover)}
                   alt={`${album.title} by ${album.artist}`}
-                  loading="lazy"
+                  loading={Math.abs(off) <= 2 ? "eager" : "lazy"}
                   decoding="async"
-                  onError={(e) => { e.target.style.display = "none"; }}
+                  fetchPriority={index === activeIdx ? "high" : "low"}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.style.display = "none";
+                  }}
                   draggable={false}
                 />
-                <div className="album-cover-fallback" style={{ backgroundColor: album.dominantColor }} />
-                {index === activeIdx && album.animatedCover ? (
+                <div
+                  className="album-cover-fallback"
+                  style={{ backgroundColor: album.dominantColor ?? "#2a2a2a" }}
+                />
+                {index === activeIdx && album.animatedCover && allowAnimatedAlbumCovers ? (
                   <video
+                    key={resolvedMediaUrl(album.animatedCover)}
                     ref={activeAnimatedVideoRef}
                     className={`animated-cover-video${isPlaying ? " animated-cover-video--playing" : ""}`}
-                    src={album.animatedCover}
-                    poster={album.cover}
+                    src={resolvedMediaUrl(album.animatedCover)}
+                    poster={resolvedMediaUrl(album.cover)}
                     muted
                     playsInline
                     preload="auto"
@@ -638,6 +682,9 @@ export default function MusicCarousel() {
                     controls={false}
                     controlsList="nodownload nofullscreen noremoteplayback"
                     onContextMenu={(e) => e.preventDefault()}
+                    onError={() => {
+                      activeAnimatedVideoRef.current?.pause?.();
+                    }}
                   />
                 ) : null}
               </div>

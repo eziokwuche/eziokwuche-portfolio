@@ -247,6 +247,8 @@ select {
 }
 
 .album-cover img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -260,7 +262,9 @@ select {
 .album-cover-fallback {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
 }
 
 @keyframes animated-cover-video-in {
@@ -288,6 +292,8 @@ select {
 .animated-cover-video--playing {
   animation: animated-cover-video-in 0.4s ease forwards;
 }
+
+/* Animated covers omitted in JS when prefers-reduced-motion: reduce — no extra rules here. */
 
 /* Ensure animated covers paint above poster on mobile (no desktop-only gating). */
 @media (max-width: 768px) {
