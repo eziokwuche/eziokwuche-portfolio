@@ -16,8 +16,21 @@ const OFFSET_MULTIPLIER = 2.0;
 const AUTO_SCROLL = 0.00;
 const SNAP_DURATION = 400;
 const SCROLL_RENDER_EPS = 1e-5;
-/** Movement below this (px) counts as a tap for sync mobile audio (fat-finger friendly). */
-const TAP_MAX_MOVE_PX = 15;
+/** Fine pointer: movement below this (px) counts as a tap for play/pause. */
+const TAP_MAX_MOVE_FINE_PX = 18;
+/** Touch / coarse pointer: allow more slop so a normal tap still toggles play (not confused with a tiny drag). */
+const TAP_MAX_MOVE_COARSE_PX = 56;
+
+function tapMaxMovePx() {
+  if (typeof window === "undefined") return TAP_MAX_MOVE_FINE_PX;
+  try {
+    return window.matchMedia("(pointer: coarse)").matches
+      ? TAP_MAX_MOVE_COARSE_PX
+      : TAP_MAX_MOVE_FINE_PX;
+  } catch {
+    return TAP_MAX_MOVE_FINE_PX;
+  }
+}
 
 function parseAudioTracks(audioSrc) {
   if (audioSrc == null || audioSrc === "") return [];
@@ -477,7 +490,8 @@ export default function MusicCarousel() {
   onPointerUpRef.current = onPointerUp;
 
   handleNativeCenterTapRef.current = (e) => {
-    if (touchGestureRef.current.maxDist >= TAP_MAX_MOVE_PX) {
+    const tapSlop = tapMaxMovePx();
+    if (touchGestureRef.current.maxDist >= tapSlop) {
       touchedCfItemRef.current = null;
       return;
     }
@@ -504,12 +518,12 @@ export default function MusicCarousel() {
 
     const rawSrc = albums[idx]?.audioSrc;
     if (rawSrc == null || rawSrc === "") {
-      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+      touchGestureRef.current.maxDist = tapSlop;
       return;
     }
     const tracks = parseAudioTracks(rawSrc);
     if (tracks.length === 0) {
-      touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+      touchGestureRef.current.maxDist = tapSlop;
       return;
     }
 
@@ -549,7 +563,7 @@ export default function MusicCarousel() {
       activeAnimatedVideoRef.current?.pause?.();
     }
 
-    touchGestureRef.current.maxDist = TAP_MAX_MOVE_PX;
+    touchGestureRef.current.maxDist = tapSlop;
   };
 
   useEffect(() => {
