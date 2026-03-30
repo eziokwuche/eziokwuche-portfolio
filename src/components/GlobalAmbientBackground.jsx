@@ -32,6 +32,8 @@ export default function GlobalAmbientBackground() {
   const { currentAlbum, isPlaying, heroSectionElement } = useMusicPlayback();
   const [isHeroIntersecting, setIsHeroIntersecting] = useState(false);
   const [displayedCoverUrl, setDisplayedCoverUrl] = useState("");
+  const [orbFadeOpacity, setOrbFadeOpacity] = useState(1);
+  const prevCoverUrlRef = useRef(null);
   const ioRafRef = useRef(null);
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -67,10 +69,6 @@ export default function GlobalAmbientBackground() {
     };
   }, [heroSectionElement]);
 
-  /**
-   * While playing: ambient art always tracks the current album (carousel + MusicCarousel
-   * now pause in the same tick as index change, so no stale isPlaying).
-   */
   useEffect(() => {
     if (!isPlaying) return;
     const url = currentAlbum?.cover
@@ -79,10 +77,6 @@ export default function GlobalAmbientBackground() {
     setDisplayedCoverUrl(url);
   }, [isPlaying, currentAlbum]);
 
-  /**
-   * After pause: keep the frozen frame (last `displayedCoverUrl` from when we were playing),
-   * then resync to the carousel once opacity has finished fading — never swap `src` mid-fade.
-   */
   useEffect(() => {
     if (isPlaying) return;
     const id = window.setTimeout(() => {
@@ -93,25 +87,41 @@ export default function GlobalAmbientBackground() {
     return () => clearTimeout(id);
   }, [isPlaying, currentAlbum]);
 
+  /**
+   * Soft opacity blink on cover URL change so stacked orbs don’t snap visually.
+   * (No canvas / blobColors — album art is img-based; opacity crossfade only.)
+   */
+  useEffect(() => {
+    if (!displayedCoverUrl) {
+      prevCoverUrlRef.current = null;
+      setOrbFadeOpacity(1);
+      return;
+    }
+    if (prefersReducedMotion) {
+      prevCoverUrlRef.current = displayedCoverUrl;
+      setOrbFadeOpacity(1);
+      return;
+    }
+    const prev = prevCoverUrlRef.current;
+    prevCoverUrlRef.current = displayedCoverUrl;
+    if (prev == null || prev === displayedCoverUrl) {
+      setOrbFadeOpacity(1);
+      return;
+    }
+    setOrbFadeOpacity(0);
+    const t = window.setTimeout(() => setOrbFadeOpacity(1), 24);
+    return () => clearTimeout(t);
+  }, [displayedCoverUrl, prefersReducedMotion]);
+
   const heroBlocksAmbient =
     !BYPASS_HERO_INTERSECTION && isHeroIntersecting;
 
   const layerOpacity =
-    displayedCoverUrl &&
-    isPlaying &&
-    !heroBlocksAmbient
-      ? 1
-      : 0;
+    displayedCoverUrl && isPlaying && !heroBlocksAmbient ? 1 : 0;
 
   const { transitionMs, easing } = useMemo(() => {
     if (prefersReducedMotion) {
       return { transitionMs: 0, easing: "linear" };
-    }
-    if (!isPlaying) {
-      return {
-        transitionMs: AMBIENT_OPACITY_MS,
-        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-      };
     }
     if (heroBlocksAmbient) {
       return {
@@ -119,33 +129,79 @@ export default function GlobalAmbientBackground() {
         easing: "cubic-bezier(0.4, 0, 1, 1)",
       };
     }
+    if (!isPlaying) {
+      return {
+        transitionMs: AMBIENT_OPACITY_MS,
+        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+      };
+    }
     return {
       transitionMs: HERO_SHOW_MS,
       easing: "cubic-bezier(0, 0, 0.2, 1)",
     };
-  }, [prefersReducedMotion, isPlaying, heroBlocksAmbient]);
+  }, [prefersReducedMotion, heroBlocksAmbient, isPlaying]);
+
+  const ambientWrapperStyle = {
+    opacity: layerOpacity,
+    transition:
+      transitionMs === 0
+        ? "none"
+        : `opacity ${transitionMs}ms ${easing}`,
+  };
+
+  const motionClass = prefersReducedMotion
+    ? "global-ambient__orb global-ambient__orb--static global-ambient__blob"
+    : "global-ambient__orb global-ambient__blob";
+
+  const orbPlayStateStyle = prefersReducedMotion
+    ? { opacity: orbFadeOpacity }
+    : {
+        animationPlayState: isPlaying ? "running" : "paused",
+        opacity: orbFadeOpacity,
+      };
 
   return (
     <div
       className="global-ambient"
       aria-hidden
-      style={{
-        opacity: layerOpacity,
-        transition:
-          transitionMs === 0
-            ? "none"
-            : `opacity ${transitionMs}ms ${easing}`,
-      }}
+      style={ambientWrapperStyle}
     >
       {displayedCoverUrl ? (
         <>
-          <img
-            src={displayedCoverUrl}
-            alt=""
-            className="global-ambient__img"
-            draggable={false}
-            decoding="async"
-          />
+          <div className="global-ambient__blur-container">
+            <img
+              className={`${motionClass} global-ambient__orb--4`}
+              src={displayedCoverUrl}
+              alt=""
+              draggable={false}
+              decoding="async"
+              style={orbPlayStateStyle}
+            />
+            <img
+              className={`${motionClass} global-ambient__orb--3`}
+              src={displayedCoverUrl}
+              alt=""
+              draggable={false}
+              decoding="async"
+              style={orbPlayStateStyle}
+            />
+            <img
+              className={`${motionClass} global-ambient__orb--2`}
+              src={displayedCoverUrl}
+              alt=""
+              draggable={false}
+              decoding="async"
+              style={orbPlayStateStyle}
+            />
+            <img
+              className={`${motionClass} global-ambient__orb--1`}
+              src={displayedCoverUrl}
+              alt=""
+              draggable={false}
+              decoding="async"
+              style={orbPlayStateStyle}
+            />
+          </div>
           <div className="global-ambient__scrim" />
         </>
       ) : null}

@@ -43,55 +43,174 @@ main {
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
+  background-color: #000;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
 
-@keyframes ambient-drift {
-  0% {
-    transform: translate(-50%, -50%) translateZ(0) scale(1.5) translate(0, 0)
-      rotate(0deg);
+/* Apple Music–style: stacked circular covers + blur + saturation (opacity faded in JS). */
+.global-ambient__blur-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  filter: blur(80px) saturate(250%);
+  transform: translateZ(0);
+  will-change: filter, opacity;
+}
+
+@keyframes global-ambient-spin {
+  from {
+    transform: translate(-50%, -50%) translateZ(0) rotate(0deg);
   }
-  33% {
-    transform: translate(-50%, -50%) translateZ(0) scale(1.78) translate(4.5%, 3%)
-      rotate(2.5deg);
-  }
-  66% {
-    transform: translate(-50%, -50%) translateZ(0) scale(1.34) translate(-3.5%, 5.5%)
-      rotate(-2.5deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) translateZ(0) scale(1.5) translate(0, 0)
-      rotate(0deg);
+  to {
+    transform: translate(-50%, -50%) translateZ(0) rotate(360deg);
   }
 }
 
-.global-ambient__img {
+@keyframes global-ambient-orbit {
+  from {
+    transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(15vw)
+      rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) translateZ(0) rotate(360deg) translateX(15vw)
+      rotate(-360deg);
+  }
+}
+
+/* Tighter orbit radius for the smallest layer (25vw). */
+@keyframes global-ambient-orbit-sm {
+  from {
+    transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(9vw)
+      rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) translateZ(0) rotate(360deg) translateX(9vw)
+      rotate(-360deg);
+  }
+}
+
+/* Wider orbit on narrow screens (more motion in view). */
+@keyframes global-ambient-orbit-mobile {
+  from {
+    transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(20vw)
+      rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) translateZ(0) rotate(360deg) translateX(20vw)
+      rotate(-360deg);
+  }
+}
+
+@keyframes global-ambient-orbit-sm-mobile {
+  from {
+    transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(12vw)
+      rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) translateZ(0) rotate(360deg) translateX(12vw)
+      rotate(-360deg);
+  }
+}
+
+.global-ambient__orb {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  transform-origin: center center;
   object-fit: cover;
-  filter: blur(80px);
+  border-radius: 50%;
+  pointer-events: none;
   will-change: transform;
-  animation: ambient-drift 38s ease-in-out infinite;
+  transform: translate(-50%, -50%) translateZ(0);
+}
+
+/* Album-change polish: smooth opacity (and background-color if used on div blobs). */
+.global-ambient__blob {
+  transition: opacity 1.5s ease-in-out, background-color 1.5s ease-in-out;
+}
+
+/* 125vw — spin 20s reverse (animation-play-state from React when paused) */
+.global-ambient__orb--4 {
+  width: 125vw;
+  height: 125vw;
+  animation: global-ambient-spin 20s linear infinite reverse;
+}
+
+/* 80vw — spin 15s */
+.global-ambient__orb--3 {
+  width: 80vw;
+  height: 80vw;
+  animation: global-ambient-spin 15s linear infinite;
+}
+
+/* 50vw — orbit 12s */
+.global-ambient__orb--2 {
+  width: 50vw;
+  height: 50vw;
+  animation: global-ambient-orbit 12s linear infinite;
+}
+
+/* 25vw — smaller orbit 8s reverse */
+.global-ambient__orb--1 {
+  width: 25vw;
+  height: 25vw;
+  animation: global-ambient-orbit-sm 8s linear infinite reverse;
+}
+
+.global-ambient__orb--static {
+  animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .global-ambient__img {
-    animation: none;
-    transform: translate(-50%, -50%) translateZ(0) scale(1.5);
+  .global-ambient__orb {
+    animation: none !important;
+  }
+
+  .global-ambient__blob {
+    transition: none;
   }
 }
 
 .global-ambient__scrim {
   position: absolute;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+  background-color: rgba(0, 0, 0, 0.34);
   pointer-events: none;
+  z-index: 1;
+  transition: background-color 0.4s ease;
+}
+
+/* Mobile / narrow viewports: stronger, clearer ambient (less mud, more visible color). */
+@media (max-width: 768px) {
+  .global-ambient__blur-container {
+    filter: blur(52px) saturate(320%) contrast(1.06) brightness(1.04);
+  }
+
+  .global-ambient__scrim {
+    background-color: rgba(0, 0, 0, 0.26);
+  }
+
+  .global-ambient__orb--4 {
+    width: 138vw;
+    height: 138vw;
+  }
+
+  .global-ambient__orb--3 {
+    width: 92vw;
+    height: 92vw;
+  }
+
+  .global-ambient__orb--2 {
+    width: 58vw;
+    height: 58vw;
+    animation-name: global-ambient-orbit-mobile;
+  }
+
+  .global-ambient__orb--1 {
+    width: 34vw;
+    height: 34vw;
+    animation-name: global-ambient-orbit-sm-mobile;
+  }
 }
 
 #smooth-wrapper {
@@ -267,6 +386,7 @@ select {
 .music-title {
   color: #fff;
   margin-bottom: 40px;
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.65);
 }
 
 .coverflow-stage {
@@ -277,6 +397,7 @@ select {
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: pan-y;
 }
 
 .coverflow-stage:active {
@@ -306,6 +427,7 @@ select {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.7);
 }
 
 .album-cover {

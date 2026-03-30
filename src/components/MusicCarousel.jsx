@@ -60,6 +60,14 @@ function easeInOut(t) {
     : 0.5 * Math.pow(t * 2 - 2, 3) + 1;
 }
 
+/** Skip carousel arrow keys when the user is typing or editing text. */
+function isFocusInsideEditableField(activeEl) {
+  if (activeEl == null || typeof activeEl.closest !== "function") return false;
+  return Boolean(
+    activeEl.closest("input, textarea, select, [contenteditable='true']")
+  );
+}
+
 function clampOffset(offset, count, wrap) {
   if (wrap) {
     return offset - Math.floor(offset / count) * count;
@@ -116,6 +124,11 @@ export default function MusicCarousel() {
   const onPointerDownRef = useRef(null);
   const onPointerMoveRef = useRef(null);
   const onPointerUpRef = useRef(null);
+  const onItemClickRef = useRef(() => {});
+  /** Arrow-key navigation: reset snippets to file order from index 0 (not random shuffle). */
+  const keyboardCarouselNavRef = useRef(false);
+  /** After keyboard move, auto-play new album if playback was on when the key was pressed. */
+  const pendingKeyboardSmartPlayRef = useRef(false);
   const handleNativeCenterTapRef = useRef(null);
   /** Touchstart/mousedown target .cf-item — touchend target is unreliable on iOS Safari. */
   const touchedCfItemRef = useRef(null);
@@ -186,16 +199,47 @@ export default function MusicCarousel() {
       setCurrentTrackIdx(0);
       audio.removeAttribute("src");
       audio.load();
+      keyboardCarouselNavRef.current = false;
+      pendingKeyboardSmartPlayRef.current = false;
       return;
     }
-    shuffleOrderRef.current = shuffleIndices(tracks.length);
+
+    const fromKeyboard = keyboardCarouselNavRef.current;
+    if (fromKeyboard) {
+      keyboardCarouselNavRef.current = false;
+      shuffleOrderRef.current = tracks.map((_, i) => i);
+    } else {
+      shuffleOrderRef.current = shuffleIndices(tracks.length);
+    }
     shufflePosRef.current = 0;
     const firstIdx = shuffleOrderRef.current[0];
     currentTrackIdxRef.current = firstIdx;
     setCurrentTrackIdx(firstIdx);
     audio.src = tracks[firstIdx];
     audio.load();
-  }, [activeIdx]);
+
+    const shouldSmartPlay = pendingKeyboardSmartPlayRef.current;
+    if (shouldSmartPlay) {
+      pendingKeyboardSmartPlayRef.current = false;
+      audio.volume = 1;
+      setIsPlaying(true);
+      const v = activeAnimatedVideoRef.current;
+      if (v && albums[activeIdx]?.animatedCover) {
+        v.muted = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        const vp = v.play();
+        if (vp !== undefined) void vp.catch(() => {});
+      }
+      const p = audio.play();
+      if (p !== undefined) {
+        void p.catch(() => {
+          setIsPlaying(false);
+          activeAnimatedVideoRef.current?.pause?.();
+        });
+      }
+    }
+  }, [activeIdx, setIsPlaying]);
 
   /**
    * Advance to the next track in the shuffled order (skip or natural end).
@@ -392,7 +436,11 @@ export default function MusicCarousel() {
   }, [count, wrap, snapToNearest]);
 
   function onPointerDown(e) {
-    e.preventDefault();
+    const isTouch =
+      e.type === "touchstart" || e.pointerType === "touch";
+    if (!isTouch) {
+      e.preventDefault();
+    }
     touchedCfItemRef.current = e.target?.closest?.(".cf-item") ?? null;
     const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
     const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
@@ -413,6 +461,14 @@ export default function MusicCarousel() {
     g.maxDist = Math.max(g.maxDist, d);
     g.maxAbsDx = Math.max(g.maxAbsDx, Math.abs(x - g.startX));
     g.maxAbsDy = Math.max(g.maxAbsDy, Math.abs(y - g.startY));
+    const isTouchMove =
+      e.type === "touchmove" || e.pointerType === "touch";
+    if (
+      isTouchMove &&
+      g.maxAbsDx > g.maxAbsDy + 6
+    ) {
+      e.preventDefault();
+    }
     const dx = x - dragRef.current.prevX;
     const now = performance.now();
     const dtMs = now - dragRef.current.prevTime;
@@ -491,6 +547,73 @@ export default function MusicCarousel() {
     if (snapRef.current) cancelAnimationFrame(snapRef.current);
     snapRef.current = requestAnimationFrame(animate);
   }
+
+  onItemClickRef.current = onItemClick;
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.defaultPrevented) return;
+      if (count < 1) return;
+      if (isFocusInsideEditableField(document.activeElement)) return;
+
+      if (e.code === "Space" || e.key === " ") {
+        if (!sectionInViewRef.current) return;
+        const idx = activeIdxRef.current;
+        const tracks = parseAudioTracks(albums[idx]?.audioSrc);
+        if (tracks.length === 0) return;
+        e.preventDefault();
+        const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
+        if (audio.paused) {
+          const v = activeAnimatedVideoRef.current;
+          if (v && albums[idx]?.animatedCover) {
+            v.muted = true;
+            v.setAttribute("playsinline", "");
+            v.setAttribute("webkit-playsinline", "");
+            const vp = v.play();
+            if (vp !== undefined) void vp.catch(() => {});
+          }
+          audio.volume = 1;
+          setIsPlaying(true);
+          const p = audio.play();
+          if (p !== undefined) {
+            void p.catch(() => {
+              setIsPlaying(false);
+              activeAnimatedVideoRef.current?.pause?.();
+            });
+          }
+        } else {
+          audio.pause();
+          setIsPlaying(false);
+          activeAnimatedVideoRef.current?.pause?.();
+        }
+        return;
+      }
+
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const idx = activeIdxRef.current;
+      const nextIndex =
+        e.key === "ArrowRight"
+          ? wrap
+            ? (idx + 1) % count
+            : Math.min(idx + 1, count - 1)
+          : wrap
+            ? (idx - 1 + count) % count
+            : Math.max(idx - 1, 0);
+
+      if (nextIndex === idx) return;
+      e.preventDefault();
+      keyboardCarouselNavRef.current = true;
+      if (isPlaying) {
+        pendingKeyboardSmartPlayRef.current = true;
+      }
+      onItemClickRef.current(nextIndex);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [count, wrap, isPlaying, setIsPlaying]);
 
   function onMouseEnter() {
     hoveredRef.current = true;
@@ -619,8 +742,8 @@ export default function MusicCarousel() {
       touchedCfItemRef.current = null;
       onPointerUpRef.current?.();
     };
-    el.addEventListener("touchstart", onTouchStart, { passive: false });
-    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
     el.addEventListener("touchcancel", onTouchCancel, { passive: true });
     return () => {
@@ -659,7 +782,11 @@ export default function MusicCarousel() {
   }
 
   return (
-    <section className="music-section" ref={sectionRef}>
+    <section
+      className="music-section"
+      ref={sectionRef}
+      aria-label="Music. Arrow keys change albums. Space plays or pauses the centered album while this section is on screen."
+    >
       <div className="container">
         <h2 className="section-title music-title">Music</h2>
       </div>
