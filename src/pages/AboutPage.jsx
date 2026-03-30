@@ -20,7 +20,7 @@ export default function AboutPage() {
           </div>
           <div className="home-intro__image">
             <img 
-              src="/public/IMG_7015.jpg" 
+              src="/IMG_7015.jpg" 
               alt="Uchechukwu Nnani" 
             />
           </div>
