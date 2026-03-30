@@ -641,12 +641,6 @@ export default function MusicCarousel() {
 
   handleNativeCenterTapRef.current = (e) => {
     const g = touchGestureRef.current;
-    if (
-      Math.abs(scrollRef.current - dragRef.current.startOffset) > TAP_MAX_SCROLL_OFFSET_DELTA
-    ) {
-      touchedCfItemRef.current = null;
-      return;
-    }
     const isTouchEnd = e?.type === "touchend";
     if (isTouchEnd) {
       if (g.maxAbsDx > TOUCH_TAP_MAX_H_PX || g.maxAbsDy > TOUCH_TAP_MAX_V_PX) {
@@ -669,6 +663,10 @@ export default function MusicCarousel() {
     const raw = tappedItem.dataset?.albumIndex;
     if (raw === undefined) return;
     const idx = Number(raw);
+
+    if (
+      Math.abs(scrollRef.current - dragRef.current.startOffset) > TAP_MAX_SCROLL_OFFSET_DELTA
+    ) return;
 
     let closest = 0;
     let minOff = Infinity;
@@ -719,33 +717,33 @@ export default function MusicCarousel() {
       }
     }
 
-    // Define the toggle explicitly before applying it
     const shouldPlay = audio.paused;
 
+    // Reset BEFORE async work to prevent double-firing
+    touchGestureRef.current.maxDist = TOUCH_TAP_MAX_COMBINED_PX + 1;
+
     if (shouldPlay) {
-      // PLAY SEQUENCE
-      setIsPlaying(true);
       tryPlayAnimatedVideo();
-      
-      // Force volume and play
       audio.volume = 1;
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.warn("Audio play blocked by mobile browser:", error);
-          setIsPlaying(false);
-          activeAnimatedVideoRef.current?.pause?.();
-        });
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((error) => {
+            console.warn("Audio play blocked:", error);
+            setIsPlaying(false);
+            activeAnimatedVideoRef.current?.pause?.();
+          });
+      } else {
+        setIsPlaying(true);
       }
     } else {
-      // PAUSE SEQUENCE
       setIsPlaying(false);
       audio.pause();
       activeAnimatedVideoRef.current?.pause?.();
     }
-
-    // Reset touch gesture state to prevent double-firing
-    touchGestureRef.current.maxDist = TOUCH_TAP_MAX_COMBINED_PX + 1;
   };
 
   useEffect(() => {
