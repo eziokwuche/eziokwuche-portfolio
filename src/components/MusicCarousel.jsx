@@ -134,6 +134,8 @@ export default function MusicCarousel() {
   const touchedCfItemRef = useRef(null);
   /** Mounted for centered album w/ .mp4 so play() can run in the same touch gesture as audio. */
   const activeAnimatedVideoRef = useRef(null);
+  const isPlayingRef = useRef(false);
+  const lastTouchEndTimeRef = useRef(0);
   const touchGestureRef = useRef({
     startX: 0,
     startY: 0,
@@ -171,6 +173,11 @@ export default function MusicCarousel() {
 
   currentTrackIdxRef.current = currentTrackIdx;
 
+  // Keep ref in sync with context state so mobile tap toggles behave deterministically.
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   useEffect(() => {
     const audio = audioRef.current;
     const onEnded = () => {
@@ -186,6 +193,7 @@ export default function MusicCarousel() {
   /** Swipe / scroll to another album: stop playback immediately. */
   useEffect(() => {
     MUSIC_CAROUSEL_AUDIO_ENGINE.pause();
+    isPlayingRef.current = false;
     setIsPlaying(false);
   }, [activeIdx]);
 
@@ -521,7 +529,8 @@ export default function MusicCarousel() {
 
   function onItemClick(i) {
     if (i === activeIdx) {
-      // If the user clicks the currently active album, trigger the play/pause logic
+      // Block synthetic click fired by browser ~300ms after touchend
+      if (Date.now() - lastTouchEndTimeRef.current < 500) return;
       handleNativeCenterTapRef.current?.();
       return;
     }
@@ -664,9 +673,13 @@ export default function MusicCarousel() {
     if (raw === undefined) return;
     const idx = Number(raw);
 
+    const maxTapScrollDelta = isTouchEnd
+      ? TAP_MAX_SCROLL_OFFSET_DELTA * 2.75
+      : TAP_MAX_SCROLL_OFFSET_DELTA;
     if (
-      Math.abs(scrollRef.current - dragRef.current.startOffset) > TAP_MAX_SCROLL_OFFSET_DELTA
-    ) return;
+      Math.abs(scrollRef.current - dragRef.current.startOffset) > maxTapScrollDelta
+    )
+      return;
 
     let closest = 0;
     let minOff = Infinity;
@@ -717,22 +730,40 @@ export default function MusicCarousel() {
       }
     }
 
-    const shouldPlay = audio.paused;
+    const shouldPlay = !isPlayingRef.current;
 
     // Reset BEFORE async work to prevent double-firing
     touchGestureRef.current.maxDist = TOUCH_TAP_MAX_COMBINED_PX + 1;
 
     if (shouldPlay) {
-      tryPlayAnimatedVideo();
+      isPlayingRef.current = true;
+      // Kick off video + audio in the same synchronous gesture tick (iOS requirement)
+      const v = activeAnimatedVideoRef.current;
+      if (v && albums[idx]?.animatedCover) {
+        v.muted = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        // Play video immediately — don't wait for audio promise
+        const vp = v.play();
+        if (vp !== undefined) void vp.catch(() => {});
+      }
       audio.volume = 1;
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
             setIsPlaying(true);
+            // Re-attempt video play after audio confirms (handles race on some Android browsers)
+            const v2 = activeAnimatedVideoRef.current;
+            if (v2 && albums[idx]?.animatedCover && v2.paused) {
+              v2.muted = true;
+              const vp2 = v2.play();
+              if (vp2 !== undefined) void vp2.catch(() => {});
+            }
           })
           .catch((error) => {
             console.warn("Audio play blocked:", error);
+            isPlayingRef.current = false;
             setIsPlaying(false);
             activeAnimatedVideoRef.current?.pause?.();
           });
@@ -740,6 +771,7 @@ export default function MusicCarousel() {
         setIsPlaying(true);
       }
     } else {
+      isPlayingRef.current = false;
       setIsPlaying(false);
       audio.pause();
       activeAnimatedVideoRef.current?.pause?.();
@@ -756,6 +788,7 @@ export default function MusicCarousel() {
       onPointerMoveRef.current?.(e);
     };
     const onTouchEnd = (e) => {
+      lastTouchEndTimeRef.current = Date.now();
       handleNativeCenterTapRef.current?.(e);
       onPointerUpRef.current?.();
     };
