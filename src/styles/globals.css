@@ -368,9 +368,32 @@ select {
   font-size: clamp(1.0625rem, 2.15vw, 1.3125rem);
   letter-spacing: -0.02em;
   line-height: 1.6;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.4);
   max-width: min(58rem, 100%);
   width: 100%;
+}
+
+/* New CSS to style the image container and the photo itself */
+.home-intro__image {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 450px; /* Limits the max size of the photo on desktop */
+  transform: translateX(-60px);
+}
+
+.home-intro__image img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 12px; /* Slightly rounded corners for a modern look */
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .home-intro__image {
+    max-width: 100%;
+    margin-top: 2rem; /* Adds space when stacked on mobile */
+  }
 }
 
 /* ── Music Cover Flow ─────────────────────────── */
@@ -1722,5 +1745,37 @@ a.education-list__school--uncg:focus-visible {
 
   .page-section.full-height {
     padding-top: 80px;
+  }
+}
+/* ── Force Side-by-Side Layout on Desktop ── */
+@media (min-width: 768px) {
+  .home-intro__editorial {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4rem;
+  }
+
+  .home-intro__copy.p1 {
+    flex: 1;
+    max-width: 60%;
+  }
+}
+/* ── MOBILE FIX: Perfectly Center the Image on Phones ── */
+@media (max-width: 767px) {
+  .home-intro__image {
+    margin-top: 3rem !important;      /* Adds breathing room between text and image */
+    margin-left: auto !important;     /* Pushes from the left */
+    margin-right: auto !important;    /* Pushes from the right (Centers it) */
+    display: flex;
+    justify-content: center;
+    transform: none !important;       /* Cancels out any desktop nudging */
+    width: 100%;
+    max-width: 350px;                 /* Keeps the photo from getting too massive on a phone */
+  }
+
+  .home-intro__image img {
+    margin: 0 auto;
   }
 }

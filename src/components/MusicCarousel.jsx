@@ -520,11 +520,18 @@ export default function MusicCarousel() {
   }
 
   function onItemClick(i) {
-    if (i === activeIdx) return;
+    if (i === activeIdx) {
+      // If the user clicks the currently active album, trigger the play/pause logic
+      handleNativeCenterTapRef.current?.();
+      return;
+    }
 
     autoRef.current = false;
     velocityRef.current = 0;
-    if (snapRef.current) { cancelAnimationFrame(snapRef.current); snapRef.current = null; }
+    if (snapRef.current) { 
+      cancelAnimationFrame(snapRef.current); 
+      snapRef.current = null; 
+    }
 
     let target = i;
     if (wrap) {
@@ -712,16 +719,32 @@ export default function MusicCarousel() {
       }
     }
 
-    if (audio.paused) {
-      /* Video first: iOS/WebKit often only allows one in-band media play() per tap; muted inline video + audio right after works more reliably. */
+    // Define the toggle explicitly before applying it
+    const shouldPlay = audio.paused;
+
+    if (shouldPlay) {
+      // PLAY SEQUENCE
+      setIsPlaying(true);
       tryPlayAnimatedVideo();
-      resumeWithoutChangingSrc();
+      
+      // Force volume and play
+      audio.volume = 1;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn("Audio play blocked by mobile browser:", error);
+          setIsPlaying(false);
+          activeAnimatedVideoRef.current?.pause?.();
+        });
+      }
     } else {
-      audio.pause();
+      // PAUSE SEQUENCE
       setIsPlaying(false);
+      audio.pause();
       activeAnimatedVideoRef.current?.pause?.();
     }
 
+    // Reset touch gesture state to prevent double-firing
     touchGestureRef.current.maxDist = TOUCH_TAP_MAX_COMBINED_PX + 1;
   };
 
