@@ -2,6 +2,7 @@ const experience = [
   {
     title: "Co-Founder & Operations Manager",
     company: "InOptive Studios",
+    logo: "/skills-logos/inoptive-logo.svg",
     location: "Raleigh, NC",
     period: "Sept. 2020 — Dec. 2025",
     endDate: "2025-12-31",
