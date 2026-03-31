@@ -1216,7 +1216,10 @@ a.education-list__school--uncg:focus-visible {
 }
 
 .project-card {
-  display: block;
+  display: flex;             
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;    
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -1246,6 +1249,9 @@ a.education-list__school--uncg:focus-visible {
 
 .project-info {
   padding: 20px;
+  display: flex;             /* ADD THIS */
+  flex-direction: column;    /* ADD THIS */
+  flex-grow: 1;              /* ADD THIS: Forces the box to fill empty height */
 }
 
 .project-name {
@@ -1266,6 +1272,7 @@ a.education-list__school--uncg:focus-visible {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: auto;          /* ADD THIS: Pushes the tags completely to the bottom */
 }
 
 .project-tag {
