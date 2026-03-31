@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useContext } from "react";
 import albums from "@/data/albums";
 import { ExplicitIcon } from "@/components/icons/ExplicitIcon";
-import { useMusicPlayback } from "@/context/MusicPlaybackContext";
+import {
+  MusicPlaybackContext,
+} from "@/context/MusicPlaybackContext";
 import { resolvedMediaUrl } from "@/utils/resolvedMediaUrl";
 import { MUSIC_CAROUSEL_AUDIO_ENGINE } from "@/audio/musicCarouselAudio";
+import { normalizeAlbum } from "@/utils/normalizeAlbum";
 
 const TILT = 0.9;
 const SPACING = 0.25;
@@ -93,12 +96,39 @@ function coverFlowTransform(offset) {
 }
 
 export default function MusicCarousel() {
+  const playback = useContext(MusicPlaybackContext);
+  if (!playback) {
+    throw new Error("MusicCarousel must be used within MusicPlaybackProvider");
+  }
   const {
     currentAlbumIndex: activeIdx,
     setCurrentAlbumIndex: setActiveIdx,
+    currentTrack,
     isPlaying,
     setIsPlaying,
-  } = useMusicPlayback();
+    playTrack,
+    togglePlay,
+    pendingPlayTrack,
+    clearPendingPlayTrack,
+  } = playback;
+
+  const handleCoverTap = useCallback(
+    (album, index) => {
+      const normalized = normalizeAlbum(album, index);
+      if (!normalized) return;
+      const tracks = parseAudioTracks(normalized.audioSrc);
+      if (tracks.length === 0) return;
+      if (currentTrack?.id === normalized.id) {
+        togglePlay();
+      } else {
+        playTrack(normalized);
+      }
+    },
+    [currentTrack?.id, togglePlay, playTrack]
+  );
+
+  const handleCoverTapRef = useRef(handleCoverTap);
+  handleCoverTapRef.current = handleCoverTap;
   const count = albums.length;
   const sectionRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -227,29 +257,50 @@ export default function MusicCarousel() {
     audio.src = tracks[firstIdx];
     audio.load();
 
-    const shouldSmartPlay = pendingKeyboardSmartPlayRef.current;
+    const shouldSmartPlay =
+      pendingKeyboardSmartPlayRef.current || pendingPlayTrack;
     if (shouldSmartPlay) {
       pendingKeyboardSmartPlayRef.current = false;
-      audio.volume = 1;
+      if (pendingPlayTrack) clearPendingPlayTrack();
       setIsPlaying(true);
-      const v = activeAnimatedVideoRef.current;
-      if (v && albums[activeIdx]?.animatedCover) {
-        v.muted = true;
-        v.setAttribute("playsinline", "");
-        v.setAttribute("webkit-playsinline", "");
-        const vp = v.play();
-        if (vp !== undefined) void vp.catch(() => {});
-      }
-      const p = audio.play();
-      if (p !== undefined) {
-        void p.catch(() => {
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          activeAnimatedVideoRef.current?.pause?.();
-        });
-      }
     }
-  }, [activeIdx, setIsPlaying]);
+  }, [
+    activeIdx,
+    setIsPlaying,
+    pendingPlayTrack,
+    clearPendingPlayTrack,
+  ]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!isPlaying) {
+      audio.pause();
+      activeAnimatedVideoRef.current?.pause?.();
+      isPlayingRef.current = false;
+      return;
+    }
+    const tracks = parseAudioTracks(albums[activeIdx]?.audioSrc);
+    if (tracks.length === 0) {
+      setIsPlaying(false);
+      return;
+    }
+    isPlayingRef.current = true;
+    audio.volume = 1;
+    const n = normalizeAlbum(albums[activeIdx], activeIdx);
+    const v = activeAnimatedVideoRef.current;
+    if (v && n?.animatedCoverUrl) {
+      v.muted = true;
+      void v.play?.().catch(() => {});
+    }
+    const p = audio.play();
+    if (p !== undefined) {
+      void p.catch(() => {
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        activeAnimatedVideoRef.current?.pause?.();
+      });
+    }
+  }, [isPlaying, activeIdx, setIsPlaying]);
 
   /**
    * Advance to the next track in the shuffled order (skip or natural end).
@@ -301,7 +352,8 @@ export default function MusicCarousel() {
     audio.volume = 1;
     setIsPlaying(true);
     const v = activeAnimatedVideoRef.current;
-    if (v && albums[idx]?.animatedCover) {
+    const animUrl = normalizeAlbum(albums[idx], idx)?.animatedCoverUrl;
+    if (v && animUrl) {
       v.muted = true;
       v.setAttribute("playsinline", "");
       v.setAttribute("webkit-playsinline", "");
@@ -540,7 +592,7 @@ export default function MusicCarousel() {
     if (i === activeIdx) {
       // Block synthetic click fired by browser ~300ms after touchend
       if (Date.now() - lastTouchEndTimeRef.current < 500) return;
-      handleNativeCenterTapRef.current?.();
+      handleCoverTap(albums[i], i);
       return;
     }
 
@@ -587,33 +639,7 @@ export default function MusicCarousel() {
         const tracks = parseAudioTracks(albums[idx]?.audioSrc);
         if (tracks.length === 0) return;
         e.preventDefault();
-        const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
-        if (!isPlayingRef.current) {
-          const v = activeAnimatedVideoRef.current;
-          if (v && albums[idx]?.animatedCover) {
-            v.muted = true;
-            v.setAttribute("playsinline", "");
-            v.setAttribute("webkit-playsinline", "");
-            const vp = v.play();
-            if (vp !== undefined) void vp.catch(() => {});
-          }
-          audio.volume = 1;
-          isPlayingRef.current = true;
-          setIsPlaying(true);
-          const p = audio.play();
-          if (p !== undefined) {
-            void p.catch(() => {
-              isPlayingRef.current = false;
-              setIsPlaying(false);
-              activeAnimatedVideoRef.current?.pause?.();
-            });
-          }
-        } else {
-          audio.pause();
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          activeAnimatedVideoRef.current?.pause?.();
-        }
+        handleCoverTapRef.current?.(albums[idx], idx);
         return;
       }
 
@@ -717,84 +743,12 @@ export default function MusicCarousel() {
       return;
     }
 
-    const audio = MUSIC_CAROUSEL_AUDIO_ENGINE;
-
-    /** Resume: do not touch .src (preserves playhead). */
-    function resumeWithoutChangingSrc() {
-      audio.volume = 1;
-      setIsPlaying(true);
-      const p = audio.play();
-      if (p !== undefined) {
-        void p.catch(() => {
-          isPlayingRef.current = false;
-          setIsPlaying(false);
-          activeAnimatedVideoRef.current?.pause?.();
-        });
-      }
-    }
-
-    function tryPlayAnimatedVideo() {
-      const v = activeAnimatedVideoRef.current;
-      if (v && albums[idx]?.animatedCover) {
-        v.muted = true;
-        v.setAttribute("playsinline", "");
-        v.setAttribute("webkit-playsinline", "");
-        const vp = v.play();
-        if (vp !== undefined) void vp.catch(() => {});
-      }
-    }
-
-    const shouldPlay = !isPlayingRef.current;
-
-    // Reset BEFORE async work to prevent double-firing
     touchGestureRef.current.maxDist = TOUCH_TAP_MAX_COMBINED_PX + 1;
-
-    if (shouldPlay) {
-      isPlayingRef.current = true;
-      tapPlayingRef.current = true;
-      setTimeout(() => { tapPlayingRef.current = false; }, 600);
-      // Kick off video + audio in the same synchronous gesture tick (iOS requirement)
-      const v = activeAnimatedVideoRef.current;
-      if (v && albums[idx]?.animatedCover) {
-        v.muted = true;
-        v.setAttribute("playsinline", "");
-        v.setAttribute("webkit-playsinline", "");
-        // Play video immediately — don't wait for audio promise
-        const vp = v.play();
-        if (vp !== undefined) void vp.catch(() => {});
-      }
-      audio.volume = 1;
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-            // Re-attempt video play after audio confirms (handles race on some Android browsers)
-            const v2 = activeAnimatedVideoRef.current;
-            if (v2 && albums[idx]?.animatedCover && v2.paused) {
-              v2.muted = true;
-              v2.setAttribute("playsinline", "");
-              v2.setAttribute("webkit-playsinline", "");
-              const vp2 = v2.play();
-              if (vp2 !== undefined) void vp2.catch(() => {});
-            }
-          })
-          .catch((error) => {
-            console.warn("Audio play blocked:", error);
-            isPlayingRef.current = false;
-            setIsPlaying(false);
-            activeAnimatedVideoRef.current?.pause?.();
-          });
-      } else {
-        setIsPlaying(true);
-      }
-    } else {
+    tapPlayingRef.current = true;
+    setTimeout(() => {
       tapPlayingRef.current = false;
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-      audio.pause();
-      activeAnimatedVideoRef.current?.pause?.();
-    }
+    }, 600);
+    handleCoverTapRef.current?.(albums[idx], idx);
   };
 
   useEffect(() => {
@@ -870,18 +824,32 @@ export default function MusicCarousel() {
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={onPointerDown}
         onMouseMove={onPointerMove}
-        onMouseUp={(e) => {
-          handleNativeCenterTapRef.current?.(e.nativeEvent);
+        onMouseUp={() => {
           onPointerUp();
         }}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
         <div className="coverflow-perspective">
-          {visible.map(({ album, index, off, style }) => (
+          {visible.map(({ album, index, off, style }) => {
+            const normalized = normalizeAlbum(album, index);
+            const isThisAlbumPlaying =
+              index === activeIdx &&
+              isPlaying &&
+              currentTrack?.id === normalized?.id;
+            const showAnimatedCover =
+              Boolean(
+                isThisAlbumPlaying &&
+                  normalized?.animatedCoverUrl &&
+                  allowAnimatedAlbumCovers
+              );
+
+            return (
             <div
               key={index}
-              className={`cf-item${index === activeIdx ? " cf-item--active" : ""}`}
+              className={`cf-item${index === activeIdx ? " cf-item--active" : ""}${
+                isThisAlbumPlaying ? " is-playing" : ""
+              }`}
               style={{
                 ...style,
                 cursor: isDragging
@@ -894,33 +862,18 @@ export default function MusicCarousel() {
               onClick={() => onItemClick(index)}
             >
               <div className="album-cover">
-                <img
-                  src={resolvedMediaUrl(album.cover)}
-                  alt={`${album.title} by ${album.artist}`}
-                  loading={Math.abs(off) <= 2 ? "eager" : "lazy"}
-                  decoding="async"
-                  fetchPriority={index === activeIdx ? "high" : "low"}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.style.display = "none";
-                  }}
-                  draggable={false}
-                />
-                <div
-                  className="album-cover-fallback"
-                  style={{ backgroundColor: album.dominantColor ?? "#2a2a2a" }}
-                />
-                {index === activeIdx && album.animatedCover && allowAnimatedAlbumCovers ? (
+                {showAnimatedCover ? (
                   <video
-                    key={resolvedMediaUrl(album.animatedCover)}
-                    ref={activeAnimatedVideoRef}
-                    className={`animated-cover-video${isPlaying ? " animated-cover-video--playing" : ""}`}
-                    src={resolvedMediaUrl(album.animatedCover)}
-                    poster={resolvedMediaUrl(album.cover)}
+                    key={resolvedMediaUrl(normalized.animatedCoverUrl)}
+                    ref={index === activeIdx ? activeAnimatedVideoRef : undefined}
+                    className={`animated-cover-video${isThisAlbumPlaying ? " animated-cover-video--playing" : ""}`}
+                    src={resolvedMediaUrl(normalized.animatedCoverUrl)}
+                    poster={resolvedMediaUrl(normalized.staticCoverUrl)}
+                    autoPlay
+                    loop
                     muted
                     playsInline
                     preload="auto"
-                    loop
                     disablePictureInPicture
                     controls={false}
                     controlsList="nodownload nofullscreen noremoteplayback"
@@ -929,7 +882,26 @@ export default function MusicCarousel() {
                       activeAnimatedVideoRef.current?.pause?.();
                     }}
                   />
-                ) : null}
+                ) : (
+                  <>
+                    <img
+                      src={resolvedMediaUrl(normalized.staticCoverUrl)}
+                      alt={`${album.title} by ${album.artist}`}
+                      loading={Math.abs(off) <= 2 ? "eager" : "lazy"}
+                      decoding="async"
+                      fetchPriority={index === activeIdx ? "high" : "low"}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.style.display = "none";
+                      }}
+                      draggable={false}
+                    />
+                    <div
+                      className="album-cover-fallback"
+                      style={{ backgroundColor: album.dominantColor ?? "#2a2a2a" }}
+                    />
+                  </>
+                )}
               </div>
               <div className="cf-label">
                 <p className="album-title">
@@ -947,7 +919,8 @@ export default function MusicCarousel() {
                 <p className="album-artist">{album.artist}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
