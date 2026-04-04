@@ -117,6 +117,7 @@ export default function App() {
           {view !== "home" && <Footer currentView={view} navigate={navigate} />}
         </div>
       </div>
+      <Analytics />
     </>
   );
 }
