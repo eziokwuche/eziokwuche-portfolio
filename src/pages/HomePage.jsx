@@ -102,7 +102,7 @@ export default function HomePage({ navigate }) {
                 aria-hidden={dup === 1}
               >
                 <img
-                  src="/Portfolio Favicon.png"
+                  src="/favicon.png"
                   alt=""
                   className="ft-end-icon"
                   draggable={false}
