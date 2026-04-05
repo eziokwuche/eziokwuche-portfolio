@@ -1,4 +1,4 @@
-# Portfolio Website for Andrew Nnani
+# Portfolio Website for Uche Nnani
 
 **Live Site:** [eziokwuche.com](https://eziokwuche.com)
 
