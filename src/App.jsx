@@ -76,33 +76,12 @@ export default function App() {
     return () => cancelAnimationFrame(id);
   }, [view]);
 
-  useEffect(() => {
-    if ("scrollRestoration" in history) {
-      history.scrollRestoration = "manual";
-    }
+  function navigate(target) {
+    setView(target);
 
-    function syncFromHash() {
-      const raw = window.location.hash.slice(1);
-      if (VIEWS[raw]) setView(raw);
-    }
-
-    // Full reload / refresh: always land on home (do not restore #about etc.)
-    const { pathname, search } = window.location;
-    window.history.replaceState(null, "", `${pathname}${search}#home`);
-    setView("home");
-
-    // Beat browser scroll restoration + ensure Smoother is at top after reload
     requestAnimationFrame(() => {
       scrollToTopImmediate();
     });
-
-    window.addEventListener("hashchange", syncFromHash);
-    return () => window.removeEventListener("hashchange", syncFromHash);
-  }, []);
-
-  function navigate(target) {
-    window.location.hash = target;
-    setView(target);
   }
 
   const Page = VIEWS[view];
