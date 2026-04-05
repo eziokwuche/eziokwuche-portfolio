@@ -3,6 +3,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import HomePage from "@/pages/HomePage";
 import AboutPage from "@/pages/AboutPage";
 import ExperiencePage from "@/pages/ExperiencePage";
@@ -117,6 +118,8 @@ export default function App() {
           {view !== "home" && <Footer currentView={view} navigate={navigate} />}
         </div>
       </div>
+      <Analytics />
+      <SpeedInsights />
     </>
   );
 }
