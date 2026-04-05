@@ -1,4 +1,3 @@
-/** Encode spaces/special chars in public paths (e.g. `/album covers/…`) for reliable URLs on all browsers. */
 export function resolvedMediaUrl(path) {
   if (path == null || path === "") return "";
   const trimmed = String(path).trim();

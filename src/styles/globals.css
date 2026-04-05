@@ -36,7 +36,6 @@ main {
   min-height: 100%;
 }
 
-/* Full-page blurred album underglow — sits behind #smooth-wrapper (z-index: 0). */
 .global-ambient {
   position: fixed;
   inset: 0;
@@ -48,7 +47,6 @@ main {
   backface-visibility: hidden;
 }
 
-/* Apple Music–style: stacked circular covers + blur + saturation (opacity faded in JS). */
 .global-ambient__blur-container {
   position: absolute;
   inset: 0;
@@ -78,7 +76,6 @@ main {
   }
 }
 
-/* Tighter orbit radius for the smallest layer (25vw). */
 @keyframes global-ambient-orbit-sm {
   from {
     transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(9vw)
@@ -90,7 +87,6 @@ main {
   }
 }
 
-/* Wider orbit on narrow screens (more motion in view). */
 @keyframes global-ambient-orbit-mobile {
   from {
     transform: translate(-50%, -50%) translateZ(0) rotate(0deg) translateX(20vw)
@@ -124,33 +120,28 @@ main {
   transform: translate(-50%, -50%) translateZ(0);
 }
 
-/* Album-change polish: smooth opacity (and background-color if used on div blobs). */
 .global-ambient__blob {
   transition: opacity 1.5s ease-in-out, background-color 1.5s ease-in-out;
 }
 
-/* 125vw — spin 20s reverse (animation-play-state from React when paused) */
 .global-ambient__orb--4 {
   width: 125vw;
   height: 125vw;
   animation: global-ambient-spin 20s linear infinite reverse;
 }
 
-/* 80vw — spin 15s */
 .global-ambient__orb--3 {
   width: 80vw;
   height: 80vw;
   animation: global-ambient-spin 15s linear infinite;
 }
 
-/* 50vw — orbit 12s */
 .global-ambient__orb--2 {
   width: 50vw;
   height: 50vw;
   animation: global-ambient-orbit 12s linear infinite;
 }
 
-/* 25vw — smaller orbit 8s reverse */
 .global-ambient__orb--1 {
   width: 25vw;
   height: 25vw;
@@ -180,7 +171,6 @@ main {
   transition: background-color 0.4s ease;
 }
 
-/* Mobile / narrow viewports: stronger, clearer ambient (less mud, more visible color). */
 @media (max-width: 768px) {
   .global-ambient__blur-container {
     filter: blur(52px) saturate(320%) contrast(1.06) brightness(1.04);
@@ -351,15 +341,11 @@ select {
   flex-direction: column;
 }
 
-/* ── Bio ──────────────────────────────────────── */
-
 .bio-text {
   max-width: 680px;
   font-size: 16px;
   line-height: 1.8;
 }
-
-/* ── About: home-intro — fluid brutalist editorial poster ─ */
 
 .home-intro {
   position: relative;
@@ -368,7 +354,6 @@ select {
   color: #fff;
 }
 
-/* Tall editorial frame; paragraph reads wide (measure >> line height). */
 .home-intro__editorial {
   box-sizing: border-box;
   display: flex;
@@ -409,7 +394,6 @@ select {
   width: 100%;
 }
 
-/* Fluid paragraph: smaller type, wide measure, comfortable leading. */
 .home-intro__copy.p1 p {
   margin: 0;
   font-family: inherit;
@@ -422,11 +406,10 @@ select {
   width: 100%;
 }
 
-/* New CSS to style the image container and the photo itself */
 .home-intro__image {
   flex-shrink: 0;
   width: 100%;
-  max-width: 450px; /* Limits the max size of the photo on desktop */
+  max-width: 450px; 
   transform: translateX(-60px);
 }
 
@@ -434,14 +417,14 @@ select {
   width: 100%;
   height: auto;
   object-fit: cover;
-  border-radius: 12px; /* Slightly rounded corners for a modern look */
+  border-radius: 12px; 
   display: block;
 }
 
 @media (max-width: 767px) {
   .home-intro__image {
     max-width: 100%;
-    margin-top: 2rem; /* Adds space when stacked on mobile */
+    margin-top: 2rem; 
   }
 }
 
@@ -565,9 +548,6 @@ select {
   animation: animated-cover-video-in 0.4s ease forwards;
 }
 
-/* Animated covers omitted in JS when prefers-reduced-motion: reduce — no extra rules here. */
-
-/* Ensure animated covers paint above poster on mobile (no desktop-only gating). */
 @media (max-width: 768px) {
   .animated-cover-video {
     display: block;
@@ -648,8 +628,6 @@ select {
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ── Experience: vertical staggered timeline ─ */
-
 .page-section.experience-page {
   min-height: auto;
   padding-bottom: 1.25rem;
@@ -661,7 +639,6 @@ select {
   padding-bottom: 2.5rem;
 }
 
-/* Shared width for Experience / Education / Skills headings + body (centered on page) */
 .section-content-column {
   box-sizing: border-box;
   width: 100%;
@@ -717,7 +694,6 @@ select {
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 0;
-  /* Softer than a flat stroke: feathered ends + lower peak opacity */
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -944,8 +920,6 @@ select {
   }
 }
 
-/* ── Education (compact row: logo, school + program, date) ─ */
-
 .education-list {
   list-style: none;
   margin: 0;
@@ -1070,8 +1044,6 @@ a.education-list__school--uncg:focus-visible {
   }
 }
 
-/* ── Skills marquee (pill row + edge fades, Tailwind-style) ─ */
-
 .skills-section {
   min-height: auto;
   padding-bottom: 80px;
@@ -1130,7 +1102,6 @@ a.education-list__school--uncg:focus-visible {
   width: 100%;
 }
 
-/* One loop unit: same pattern as .ft-end-logo-segment (clean -50% seam). */
 .skill-marquee-segment {
   display: flex;
   flex-direction: row;
@@ -1207,7 +1178,6 @@ a.education-list__school--uncg:focus-visible {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
-/* Skill font icons (if any): mute with filter only; restore hue on hover. */
 .skill-pill__icon {
   font-size: 1.375rem;
   line-height: 1;
@@ -1245,7 +1215,6 @@ a.education-list__school--uncg:focus-visible {
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* No hover: show full color (touch / reduced fine pointer) */
 @media (hover: none), (pointer: coarse) {
   .skill-pill__icon {
     filter: none;
@@ -1282,7 +1251,6 @@ a.education-list__school--uncg:focus-visible {
   }
 }
 
-/* ── Projects page: avoid forced full-viewport empty space below grid ─ */
 .page-section.projects-page {
   min-height: auto;
   padding-bottom: 2.5rem;
@@ -1330,9 +1298,9 @@ a.education-list__school--uncg:focus-visible {
 
 .project-info {
   padding: 20px;
-  display: flex;             /* ADD THIS */
-  flex-direction: column;    /* ADD THIS */
-  flex-grow: 1;              /* ADD THIS: Forces the box to fill empty height */
+  display: flex;             
+  flex-direction: column;    
+  flex-grow: 1;              
 }
 
 .project-name {
@@ -1353,7 +1321,7 @@ a.education-list__school--uncg:focus-visible {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: auto;          /* ADD THIS: Pushes the tags completely to the bottom */
+  margin-top: auto;         
 }
 
 .project-tag {
@@ -1429,10 +1397,6 @@ a.education-list__school--uncg:focus-visible {
     transform: none;
   }
 }
-
-/* ── Footer ───────────────────────────────────── */
-
-/* ── Footer ───────────────────────────────────── */
 
 .site-footer {
   width: 100%;
@@ -1514,7 +1478,6 @@ a.education-list__school--uncg:focus-visible {
 
 .ft-mails {
   --ft-mail-gap: 1rem;
-  /* Taller stack between Get In Touch + Location so Location lines up with ~Projects / Instagram row */
   --ft-mails-between: clamp(2.25rem, 4.5vw, 3.35rem);
   display: flex;
   flex-direction: column;
@@ -1541,7 +1504,6 @@ a.education-list__school--uncg:focus-visible {
   text-align: right;
 }
 
-/* ── End section (name + bottom texts) ── */
 .ft-end {
   flex: 1;
   display: flex;
@@ -1593,7 +1555,6 @@ a.education-list__school--uncg:focus-visible {
   will-change: transform;
 }
 
-/* One repeat unit: logo — ANDREW — UCHECHUKWU — NNANI; same gap + pad before next copy loops */
 .ft-end-logo-segment {
   --ft-marquee-gap: clamp(0.45em, 2.2vw, 1.1em);
   display: flex;
@@ -1650,7 +1611,6 @@ a.education-list__school--uncg:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  /* Same horizontal inset as music/footer on notched phones */
   .page-section.experience-page .container,
   .page-section.education-section .container,
   .page-section.skills-section .container,
@@ -1666,10 +1626,6 @@ a.education-list__school--uncg:focus-visible {
     margin-inline: 0;
   }
 
-  /*
-   * Mobile timeline: node column (~12px + 2px borders) + column gap (1rem) —
-   * cards start inset; align the section title with the card column, not the rail.
-   */
   .section-content-column--experience .experience-page__section-heading {
     padding-left: calc(12px + 4px + 1rem);
   }
@@ -1726,7 +1682,6 @@ a.education-list__school--uncg:focus-visible {
     color: #fff;
   }
 
-  /* Footer: stack label above links so Explore + Connect link columns share one left edge */
   .ft-nav {
     flex-direction: column;
     align-items: flex-start;
@@ -1816,7 +1771,6 @@ a.education-list__school--uncg:focus-visible {
     text-align: left;
   }
 
-  /* Same size for Explore + Connect links (not mail / contact lines) */
   .ft-navs .ft-nav .ft-link {
     font-size: clamp(1.5rem, 7.5vw, 2rem);
   }
@@ -1837,7 +1791,7 @@ a.education-list__school--uncg:focus-visible {
     padding-top: 80px;
   }
 }
-/* ── Force Side-by-Side Layout on Desktop ── */
+
 @media (min-width: 768px) {
   .home-intro__editorial {
     display: flex !important;
@@ -1852,17 +1806,17 @@ a.education-list__school--uncg:focus-visible {
     max-width: 60%;
   }
 }
-/* ── MOBILE FIX: Perfectly Center the Image on Phones ── */
+
 @media (max-width: 767px) {
   .home-intro__image {
-    margin-top: 3rem !important;      /* Adds breathing room between text and image */
-    margin-left: auto !important;     /* Pushes from the left */
-    margin-right: auto !important;    /* Pushes from the right (Centers it) */
+    margin-top: 3rem !important;      
+    margin-left: auto !important;     
+    margin-right: auto !important;    
     display: flex;
     justify-content: center;
-    transform: none !important;       /* Cancels out any desktop nudging */
+    transform: none !important;       
     width: 100%;
-    max-width: 350px;                 /* Keeps the photo from getting too massive on a phone */
+    max-width: 350px;                 
   }
 
   .home-intro__image img {

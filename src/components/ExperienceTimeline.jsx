@@ -1,6 +1,6 @@
 import experience from "@/data/experience";
 
-/** Newest role at top (reverse chronological). */
+
 const sortedExperience = [...experience].sort((a, b) =>
   b.endDate.localeCompare(a.endDate)
 );

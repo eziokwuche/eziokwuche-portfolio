@@ -1,4 +1,3 @@
-/** Stable album shape for playback UI (ids + cover URLs). */
 export function normalizeAlbum(a, index) {
   if (!a) return null;
   return {

@@ -8,14 +8,12 @@ for (let i = 0; i < SIN_SIZE; i++) {
 }
 
 const MAX_PARTICLES = 8500;
-/** Only run proximity sparkles inside this radius² (avoids ~7k×Math.random per frame). */
 const PROX_RAD_SQ = 180 * 180;
 const ALPHA_LEVELS = 16;
 
 const HERO_DESKTOP = "/assets/hero-desktop.png";
 const HERO_MOBILE = "/assets/hero-mobile.png";
 
-/** Nudge the hero down from vertical center so bottom dots sit on the viewport edge. */
 const HERO_VERTICAL_NUDGE_PX = 6;
 
 function getBreakpoint() {
@@ -39,7 +37,6 @@ export default function InteractiveHero() {
   );
 
   useEffect(() => {
-    // Lock hero height to initial viewport — prevents resize on iOS scroll
     let lockedHeroHeightPx = 0;
     const setHeroVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -47,7 +44,6 @@ export default function InteractiveHero() {
       document.documentElement.style.setProperty("--hero-vh", `${vh}px`);
     };
     setHeroVh();
-    // Only update on real orientation changes, not iOS scroll bar hide/show
     window.addEventListener("orientationchange", setHeroVh);
 
     const canvas = canvasRef.current;
@@ -88,7 +84,6 @@ export default function InteractiveHero() {
 
     function sizeCanvas() {
       const w = window.innerWidth;
-      // Use the locked hero height so iOS address bar changes do not visually expand/contract.
       const h = lockedHeroHeightPx || window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const newBufW = (w * dpr) | 0;
@@ -121,7 +116,6 @@ export default function InteractiveHero() {
     }
 
     function onPointerLeave(e) {
-      /* Touch/pen: no "leave" on finger lift — keep last position (same as mouse resting on canvas). */
       if (e.pointerType === "mouse") clearPointer();
     }
 

@@ -1,7 +1,3 @@
-/**
- * Removes flat matte only when it meets the image at the four corners (flood fill).
- * Avoids eating full-bleed tiles (e.g. TypeScript) that touch the mid-edge but not corners.
- */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

@@ -2,18 +2,16 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useMusicPlayback } from "@/context/MusicPlaybackContext";
 import { resolvedMediaUrl } from "@/utils/resolvedMediaUrl";
 
-/**
- * When true, ambient ignores hero visibility (debug only).
- */
+
 const BYPASS_HERO_INTERSECTION = false;
 
-/** Pause / swipe: fade art to black (must stay in sync with deferred cover resync timeout). */
+
 const AMBIENT_OPACITY_MS = 800;
 
-/** Scrolling up into hero: hide ambient quickly so it doesn’t bleed into the hero. */
+
 const HERO_HIDE_MS = 200;
 
-/** Scrolling down into portfolio: bring ambient back slowly. */
+
 const HERO_SHOW_MS = 1000;
 
 function usePrefersReducedMotion() {
@@ -87,10 +85,6 @@ export default function GlobalAmbientBackground() {
     return () => clearTimeout(id);
   }, [isPlaying, currentAlbum]);
 
-  /**
-   * Soft opacity blink on cover URL change so stacked orbs don’t snap visually.
-   * (No canvas / blobColors — album art is img-based; opacity crossfade only.)
-   */
   useEffect(() => {
     if (!displayedCoverUrl) {
       prevCoverUrlRef.current = null;

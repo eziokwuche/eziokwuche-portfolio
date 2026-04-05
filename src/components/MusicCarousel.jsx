@@ -19,23 +19,10 @@ const OFFSET_MULTIPLIER = 2.0;
 const AUTO_SCROLL = 0.00;
 const SNAP_DURATION = 400;
 const SCROLL_RENDER_EPS = 1e-5;
-/**
- * If coverflow scroll offset moved more than this during the gesture (album-index units), do not
- * treat as a play/pause tap.
- */
 const TAP_MAX_SCROLL_OFFSET_DELTA = 0.08;
-/** Fine pointer (mouse): max movement from down→up for a tap. */
 const TAP_MAX_MOVE_FINE_PX = 18;
-/**
- * Touch: horizontal movement beyond this is a carousel drag (coverflow only uses dx), not a tap.
- */
 const TOUCH_TAP_MAX_H_PX = 22;
-/**
- * Touch: vertical movement beyond this is usually page scroll; combined slop alone would still
- * allow play because scrollRef barely changes.
- */
 const TOUCH_TAP_MAX_V_PX = 44;
-/** Touch: max total wiggle from touch point for a tap (after axis checks). */
 const TOUCH_TAP_MAX_COMBINED_PX = 60;
 
 function tapMaxMovePx() {
@@ -47,7 +34,6 @@ function parseAudioTracks(audioSrc) {
   return audioSrc.split(";").map((s) => s.trim()).filter(Boolean);
 }
 
-/** Fisher–Yates shuffle of indices 0..n-1 */
 function shuffleIndices(n) {
   const arr = Array.from({ length: n }, (_, i) => i);
   for (let i = n - 1; i > 0; i--) {
@@ -63,7 +49,6 @@ function easeInOut(t) {
     : 0.5 * Math.pow(t * 2 - 2, 3) + 1;
 }
 
-/** Skip carousel arrow keys when the user is typing or editing text. */
 function isFocusInsideEditableField(activeEl) {
   if (activeEl == null || typeof activeEl.closest !== "function") return false;
   return Boolean(
@@ -146,7 +131,6 @@ export default function MusicCarousel() {
   const currentTrackIdxRef = useRef(0);
   /** Permutation of track indices for the current “round”; each index appears once per round. */
   const shuffleOrderRef = useRef([]);
-  /** Index into shuffleOrderRef (which track in the shuffled order is current). */
   const shufflePosRef = useRef(0);
   const handleTrackEndedRef = useRef(() => {});
   const activeIdxRef = useRef(0);
