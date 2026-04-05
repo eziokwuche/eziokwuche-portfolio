@@ -8,7 +8,7 @@ function SkillIcon({ skill }) {
         height={22}
         className="skill-pill__img"
         aria-hidden
-        loading="lazy"
+        loading="eager"
         decoding="async"
       />
     );
@@ -26,7 +26,9 @@ export default function SkillsMarquee({
 }) {
   if (!skillList?.length) return null;
 
-  const doubled = [...skillList, ...skillList];
+  const trackClass = reverse
+    ? "skill-marquee-track skill-marquee-track--reverse"
+    : "skill-marquee-track";
 
   return (
     <div
@@ -39,22 +41,24 @@ export default function SkillsMarquee({
         aria-hidden
       />
       <div className="skill-marquee-clip">
-        <div
-          className={
-            reverse
-              ? "skill-marquee-track skill-marquee-track--reverse"
-              : "skill-marquee-track"
-          }
-        >
-          {doubled.map((skill, i) => (
+        <div className={trackClass}>
+          {[0, 1].map((dup) => (
             <div
-              className="skill-pill"
-              key={`${skill.name}-${i}`}
-              tabIndex={0}
-              aria-label={skill.ariaLabel ?? skill.name}
+              key={dup}
+              className="skill-marquee-segment"
+              aria-hidden={dup === 1}
             >
-              <SkillIcon skill={skill} />
-              <span className="skill-pill__name">{skill.name}</span>
+              {skillList.map((skill, i) => (
+                <div
+                  className="skill-pill"
+                  key={`${skill.name}-${dup}-${i}`}
+                  tabIndex={dup === 0 ? 0 : -1}
+                  aria-label={skill.ariaLabel ?? skill.name}
+                >
+                  <SkillIcon skill={skill} />
+                  <span className="skill-pill__name">{skill.name}</span>
+                </div>
+              ))}
             </div>
           ))}
         </div>

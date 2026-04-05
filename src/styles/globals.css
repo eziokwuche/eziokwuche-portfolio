@@ -1128,33 +1128,56 @@ a.education-list__school--uncg:focus-visible {
 .skill-marquee-clip {
   overflow: hidden;
   width: 100%;
-  contain: content;
+}
+
+/* One loop unit: same pattern as .ft-end-logo-segment (clean -50% seam). */
+.skill-marquee-segment {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--skill-marquee-gap);
+  flex-shrink: 0;
+  width: max-content;
+  box-sizing: border-box;
+  padding-right: var(--skill-marquee-gap);
 }
 
 .skill-marquee-track {
   display: flex;
   flex-direction: row;
+  flex-wrap: nowrap;
   flex-shrink: 0;
   align-items: center;
-  gap: var(--skill-marquee-gap);
+  gap: 0;
   width: max-content;
   animation: skillMarquee var(--skill-marquee-duration) linear infinite;
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 .skill-marquee-track--reverse {
   animation: skillMarqueeReverse var(--skill-marquee-duration) linear infinite;
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 @keyframes skillMarquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 @keyframes skillMarqueeReverse {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 .skill-pill {
@@ -1244,6 +1267,18 @@ a.education-list__school--uncg:focus-visible {
     width: 100%;
     max-width: 100%;
     transform: none;
+  }
+
+  .skill-marquee-segment[aria-hidden="true"] {
+    display: none;
+  }
+
+  .skill-marquee-segment {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    padding-right: 0;
   }
 }
 
