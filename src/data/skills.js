@@ -12,11 +12,13 @@ export const skillsMarqueeRow1 = [
   { name: "Azure", logo: "/skills-logos/azure.svg" },
   { name: "React", logo: "/skills-logos/react.svg" },
   { name: "Next.js", logo: "/skills-logos/nextjs.svg" },
+  { name: "Express.js", logo: "/skills-logos/expressjs-icon.svg" },
   { name: "Vue", logo: "/skills-logos/vue.svg" },
 ];
 
 export const skillsMarqueeRow2 = [
   { name: "PostgreSQL", logo: "/skills-logos/postgresql.svg" },
+  { name: "NeonDB", logo: "/skills-logos/neon-logomark-dark-color.svg" },
   { name: "Google Cloud", logo: "/skills-logos/google-cloud.svg" },
   { name: "Jupyter", logo: "/skills-logos/jupyter.svg" },
   { name: "Photoshop", logo: "/skills-logos/photoshop.svg" },

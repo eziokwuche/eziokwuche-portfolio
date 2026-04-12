@@ -1,5 +1,13 @@
 const projects = [
   {
+    title: "Music Analytics Service",
+    description:
+      "REST API built with Node.js, Express, and PostgreSQL that aggregates listening history from Last.fm and Spotify, storing data in a cloud-hosted database for artist analytics.",
+    thumbnail: "/projects/music-analytics-service.png",
+    tags: ["Node.js", "Express.js", "NeonDB", "JavaScript"],
+    github: "https://github.com/eziokwuche/music-analytics-service",
+  },
+  {
     title: "Portfolio Site",
     description:
       "Interactive particle hero portfolio built with React and Canvas, featuring a custom Cover Flow music carousel.",

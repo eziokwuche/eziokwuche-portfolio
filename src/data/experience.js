@@ -7,8 +7,8 @@ const experience = [
     period: "Sept. 2020 — Dec. 2025",
     endDate: "2025-12-31",
     description:
-      "Successfully launched a streetwear brand, overseeing all aspects from concept development to product launch. Conducted comprehensive market research to identify emerging trends and developed innovative marketing strategies to increase brand awareness.",
-    tags: ["Branding", "Operations", "Marketing", "E-Commerce"],
+      "Co-founded and operated a streetwear brand from the ground up, handling everything from building the e-commerce frontend in Shopify and Liquid to integrating third-party APIs for inventory management and order processing. Developed custom JavaScript modules for cart state management and checkout routing, and ensured WCAG/ADA accessibility compliance across the storefront.",
+    tags: ["Shopify", "Liquid", "JavaScript", "APIs"],
   },
   {
     title: "Information Technology Help Desk Support Intern",
@@ -17,8 +17,8 @@ const experience = [
     period: "Aug. 2024 — Nov. 2024",
     endDate: "2024-11-30",
     description:
-      "Strengthened skills in troubleshooting hardware & software issues, user account administration, and configuring devices. Worked with Tier 2 teams to enhance systems and identified opportunities for advancement in back-end systems, network troubleshooting, and cloud computing.",
-    tags: ["IT Support", "Help Desk", "Troubleshooting"],
+      "Built Python automation tools to parse thousands of system log lines using regex, outputting structured CSV reports that significantly reduced manual triage time. Developed a Bash/Python network monitoring script running on a cron job to probe cloud servers on Oracle VM, automatically logging latency spikes. Engineered a bug escalation script that parsed alert emails, extracted hardware and software IDs, and injected formatted test cases directly into the Tier 2 ticketing system.",
+    tags: ["Python", "Bash", "Automation","Log Analysis"],
   },
   {
     title: "Data Analysis Intern",
@@ -28,8 +28,8 @@ const experience = [
     period: "Aug. 2023 — Nov. 2023",
     endDate: "2023-11-30",
     description:
-      "Developed a Python-based web crawler to extract and analyze data, integrating with ChatGPT for Q&A generation. Applied sentiment analysis techniques to interpret customer feedback and analyzed large datasets to identify trends, presenting detailed reports to management.",
-    tags: ["Python", "Data Analysis", "NLP", "Automation"],
+      "Architected a high-throughput data ingestion pipeline using Python and Scrapy, processing thousands of concurrent requests via asynchronous tasks to extract and structure large datasets. Integrated OpenAI's ChatGPT REST API to build a dynamic backend Q&A service, managing API rate limits and optimizing JSON payload structures. Developed ETL scripts to clean, transform, and load raw datasets into relational databases, ensuring data integrity for downstream engineering teams.",
+    tags: ["Python", "Scrapy", "ETL", "REST API"],
   },
 ];
 
